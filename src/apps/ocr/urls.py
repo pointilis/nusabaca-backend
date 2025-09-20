@@ -5,5 +5,5 @@ app_name = 'ocr'
 
 urlpatterns = [
     # RESTful API routes
-    path('api/', include(routers), name='ocr-api'),
+    path('ocr/', include(routers), name='ocr-api'),
 ]

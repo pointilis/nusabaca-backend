@@ -19,16 +19,6 @@ from apps.ocr.lib.google_storage import GoogleCloudStorage
 # Configure logger for the upload views
 logger = logging.getLogger(__name__)
 
-# If you want to configure logging format specifically for this module
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-
 
 class UploadAPIView(APIView):
     """
