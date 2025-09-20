@@ -1,12 +1,10 @@
-import os
 import logging
-from typing import Dict, Any
 
+from django.urls import reverse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.cache import cache
 
 from .serializers import FileSerializer
 from apps.ocr.tasks import submit_ocr_task, get_ocr_task_status
@@ -82,9 +80,9 @@ class AsyncUploadAPIView(APIView):
             )
             
             # Build status check URLs
-            base_url = request.build_absolute_uri('/')[:-1]  # Remove trailing slash
-            status_url = f"{base_url}/api/v1/upload/status/{task_id}/"
-            
+            status_url = reverse('api:ocr:v1:async-upload-status', args=[task_id])
+            absolute_status_url = request.build_absolute_uri(status_url)
+
             response_data = {
                 'success': True,
                 'message': 'File uploaded successfully. Processing in background.',
@@ -96,9 +94,9 @@ class AsyncUploadAPIView(APIView):
                     'extract_format': extract_format,
                     'confidence_threshold': confidence_threshold
                 },
-                'status_url': status_url,
+                'status_url': absolute_status_url,
                 'polling_instructions': {
-                    'check_url': status_url,
+                    'check_url': absolute_status_url,
                     'recommended_interval_seconds': 5,
                     'timeout_minutes': 30
                 }

@@ -49,7 +49,7 @@ python manage.py runserver
 **Terminal 2: Celery Worker**
 ```bash
 cd src
-celery -A nusabaca worker --loglevel=info --queues=ocr_processing,status_check -P gevent
+celery -A nusabaca worker --loglevel=info -E --queues=ocr_processing,status_check -P gevent (for windows use -P gevent)
 ```
 
 **Terminal 3: Celery Monitor (Optional)**

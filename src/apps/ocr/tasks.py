@@ -108,7 +108,7 @@ class OCRTaskProcessor:
 task_processor = OCRTaskProcessor()
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(bind=True, ignore_result=False, max_retries=3, default_retry_delay=60)
 def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
                       language: str = 'en', extract_format: str = 'text',
                       confidence_threshold: float = 0.8,
@@ -427,13 +427,47 @@ def get_task_status(task_id: str) -> Dict[str, Any]:
         Dict[str, Any]: Task status information
     """
     try:
+        # First check cache for real-time status updates
         cache_key = f"ocr_task_{task_id}"
         status_data = cache.get(cache_key)
         
         if status_data:
             return status_data
         
-        # Fallback to Celery task state
+        # Fallback to django-celery-results database
+        try:
+            from django_celery_results.models import TaskResult
+            
+            task_result = TaskResult.objects.filter(task_id=task_id).first()
+            if task_result:
+                # Parse result data
+                result_data = {}
+                if task_result.result:
+                    try:
+                        if isinstance(task_result.result, str):
+                            result_data = json.loads(task_result.result)
+                        else:
+                            result_data = task_result.result
+                    except (json.JSONDecodeError, TypeError):
+                        result_data = {'raw_result': str(task_result.result)}
+                
+                return {
+                    'task_id': task_id,
+                    'status': task_result.status,
+                    'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
+                    'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
+                    'result': result_data if isinstance(result_data, dict) else {},
+                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'created_at': task_result.date_created.isoformat(),
+                    'task_name': task_result.task_name or 'unknown',
+                    'worker': task_result.worker or 'unknown'
+                }
+        except ImportError:
+            logger.warning("django_celery_results not available, falling back to AsyncResult")
+        except Exception as e:
+            logger.error(f"Error querying django_celery_results: {str(e)}")
+        
+        # Final fallback to Celery task state
         from celery.result import AsyncResult
         result = AsyncResult(task_id)
         
@@ -506,4 +540,57 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Task status and results
     """
-    return get_task_status.delay(task_id).get()
+    try:
+        # First check cache for real-time updates
+        cache_key = f"ocr_task_{task_id}"
+        cached_status = cache.get(cache_key)
+        
+        if cached_status:
+            return cached_status
+        
+        # Query django-celery-results database directly for better performance
+        try:
+            from django_celery_results.models import TaskResult
+            
+            task_result = TaskResult.objects.filter(task_id=task_id).first()
+            if task_result:
+                # Parse result data
+                result_data = {}
+                if task_result.result:
+                    try:
+                        if isinstance(task_result.result, str):
+                            result_data = json.loads(task_result.result)
+                        else:
+                            result_data = task_result.result
+                    except (json.JSONDecodeError, TypeError):
+                        result_data = {'raw_result': str(task_result.result)}
+                
+                return {
+                    'task_id': task_id,
+                    'status': task_result.status,
+                    'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
+                    'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
+                    'result': result_data if isinstance(result_data, dict) else {},
+                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'created_at': task_result.date_created.isoformat(),
+                    'task_name': task_result.task_name or 'unknown',
+                    'worker': task_result.worker or 'unknown'
+                }
+        except ImportError:
+            logger.warning("django_celery_results not available")
+        except Exception as e:
+            logger.error(f"Error querying django_celery_results directly: {str(e)}")
+        
+        # Fallback to calling the Celery task (less efficient but works)
+        return get_task_status.delay(task_id).get()
+        
+    except Exception as e:
+        logger.error(f"Failed to get OCR task status for {task_id}: {str(e)}")
+        return {
+            'task_id': task_id,
+            'status': 'ERROR',
+            'progress': 0,
+            'message': f'Failed to retrieve task status: {str(e)}',
+            'result': {},
+            'updated_at': datetime.now().isoformat()
+        }

@@ -3,5 +3,5 @@ from .v1 import routers
 
 urlpatterns = [
     # API v1 routes
-    path('v1/', include(routers), name='v1'),
+    path('v1/', include((routers, 'v1'), namespace='v1')),
 ]

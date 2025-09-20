@@ -372,3 +372,41 @@ class UploadAPIView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class TestTaskAPIView(APIView):
+    """
+    Simple API View to test Celery task execution.
+    """
+    def get(self, request, *args, **kwargs) -> Response:
+        try:
+            from nusabaca.celery import debug_task
+            task = debug_task.delay()
+            return Response(
+                {
+                    'success': True,
+                    'message': 'Debug task dispatched successfully',
+                    'task_id': task.id
+                },
+                status=status.HTTP_200_OK
+            )
+        except ImportError as ie:
+            logger.error(f"Failed to import Celery tasks: {str(ie)}", exc_info=True)
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Celery tasks module not found',
+                    'error': str(ie)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            logger.error(f"Error dispatching debug task: {str(e)}", exc_info=True)
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Error dispatching debug task',
+                    'error': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

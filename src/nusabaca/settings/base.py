@@ -143,7 +143,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'django_celery_results',
     'apps.ocr',
+    'apps.tracker',
 ]
 
 MIDDLEWARE = [
@@ -205,16 +207,19 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'database_cache',
+    }
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -236,40 +241,3 @@ GOOGLE_CLOUD_STORAGE_BUCKET = os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET', 'nusabaca
 # Alternative names for backwards compatibility
 GCS_BUCKET_NAME = GOOGLE_CLOUD_STORAGE_BUCKET
 GCS_PROJECT_ID = GOOGLE_CLOUD_PROJECT_ID
-
-# Celery Configuration
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-
-# Celery Task Settings
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_ENABLE_UTC = True
-
-# Task routing and execution
-CELERY_TASK_ROUTES = {
-    'apps.ocr.tasks.process_ocr_upload': {
-        'queue': 'ocr_processing',
-        'routing_key': 'ocr.process',
-    },
-    'apps.ocr.tasks.get_task_status': {
-        'queue': 'status_check', 
-        'routing_key': 'status.check',
-    }
-}
-
-# Task execution settings
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_ACKS_LATE = True
-CELERY_TASK_REJECT_ON_WORKER_LOST = True
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
-
-# Task time limits
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes
-
-# Result settings
-CELERY_RESULT_EXPIRES = 3600  # 1 hour
-CELERY_IGNORE_RESULT = False
