@@ -128,8 +128,7 @@ LOGGING = {
 SECRET_KEY = 'django-insecure-=1qq@b=u!2&9np16#f9t+48*bd%@#x(pf61v)rqv6r%b$o-7an'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
+DEBUG = True
 ALLOWED_HOSTS = []
 
 
@@ -146,6 +145,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'apps.ocr',
     'apps.tracker',
+    'apps.library',
 ]
 
 MIDDLEWARE = [
