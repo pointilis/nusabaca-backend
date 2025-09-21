@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.contenttypes.admin import GenericTabularInline
 from django.utils.html import format_html
 from django.db.models import Q
 from apps.library.models import * # Import all models
@@ -48,13 +49,28 @@ class BookGenreInline(admin.TabularInline):
     extra = 1
 
 
+class PublisherInline(GenericTabularInline):
+    model = PublisherRelation
+    ct_field = "content_type"
+    ct_fk_field = "object_id"
+    extra = 1
+
+
+class CoverInline(GenericTabularInline):
+    model = Cover
+    ct_field = "content_type"
+    ct_fk_field = "object_id"
+    extra = 1
+    fields = ['image_file', 'cover_type', 'is_primary', 'display_order', 'is_active']
+
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_display = ['title', 'author_list']
     list_filter = ['language']
     search_fields = ['title', 'isbn', 'isbn13', 'description']
     readonly_fields = ['created_at', 'updated_at', 'cover_preview']
-    inlines = [BookAuthorInline, BookGenreInline]
+    inlines = [BookAuthorInline, BookGenreInline, PublisherInline, CoverInline]
 
     def author_list(self, obj):
         return obj.author_names
@@ -67,6 +83,6 @@ class BookAdmin(admin.ModelAdmin):
     cover_preview.short_description = "Cover Preview"
 
 
-@admin.register(BookEdition)
-class BookEditionAdmin(admin.ModelAdmin):
-    pass
+@admin.register(Edition)
+class EditionAdmin(admin.ModelAdmin):
+    inlines = [PublisherInline, CoverInline]

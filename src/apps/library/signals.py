@@ -12,7 +12,7 @@ def update_book_search_vector(sender, instance, **kwargs):
 
 def update_book_edition_search_vector(sender, instance, **kwargs):
     """Update search vector for book editions"""
-    BookEdition.objects.filter(pk=instance.pk).update(
+    Edition.objects.filter(pk=instance.pk).update(
         search_vector=SearchVector('edition_title', weight='A') + \
             SearchVector('isbn', 'isbn13', weight='B')
     )

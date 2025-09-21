@@ -14,5 +14,5 @@ class LibraryConfig(AppConfig):
 
         # Connect signals
         post_save.connect(signals.update_book_search_vector, sender=models.Book)
-        post_save.connect(signals.update_book_search_vector, sender=models.BookEdition)
+        post_save.connect(signals.update_book_search_vector, sender=models.Edition)
         post_save.connect(signals.update_author_search_vector, sender=models.Author)
