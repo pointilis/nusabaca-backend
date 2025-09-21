@@ -1,7 +1,7 @@
-from rest_framework import serializers
-from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
-import mimetypes
 import os
+import mimetypes
+from rest_framework import serializers
+from apps.library.models import Biblio
 
 
 class FileSerializer(serializers.Serializer):
@@ -10,6 +10,16 @@ class FileSerializer(serializers.Serializer):
     Validates image files and prepares them for text extraction.
     """
     
+    # Fields coming from Library app
+    biblio = serializers.SlugRelatedField(
+        many=False,
+        read_only=False,
+        slug_field='id',
+        queryset=Biblio.objects.all()
+    )
+    page_number = serializers.IntegerField()
+
+    # File to be uploaded (photo taken of the page)
     file = serializers.FileField(
         required=True,
         help_text="Image file to process for OCR (JPEG, PNG, GIF, BMP, WebP, TIFF)"

@@ -3,5 +3,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(('apps.ocr.urls', 'api'), namespace='api')),  # Include OCR app URLs
+    path('api/', include(('nusabaca.routers', 'api'), namespace='api')),  # Include OCR app URLs
 ]

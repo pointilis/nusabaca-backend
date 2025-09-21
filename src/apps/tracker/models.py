@@ -1,7 +1,4 @@
-import uuid
-
 from django.db import models
-from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models import F
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -13,12 +10,12 @@ app_label = TrackerConfig.label
 
 
 class Collection(BaseModel):
-    """User collections/libraries for organizing books"""
+    """User collections/libraries for organizing biblios"""
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     is_default = models.BooleanField(default=False)
     is_public = models.BooleanField(default=False)
-    books = models.ManyToManyField('library.Book', through='CollectionBook', related_name='collections')
+    biblios = models.ManyToManyField('library.Biblio', through='BiblioCollection', related_name='collections')
 
     class Meta:
         db_table = f'{app_label}_collections'
@@ -32,12 +29,10 @@ class Collection(BaseModel):
         return f"{self.created_by.username} - {self.name}"
 
 
-class CollectionBook(BaseModel):
-    """Books within user collections with personal metadata"""
+class BiblioCollection(BaseModel):
+    """Biblios within user collections with personal metadata"""
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
-    book = models.ForeignKey('library.Book', on_delete=models.CASCADE)
-    edition = models.ForeignKey('library.Edition', on_delete=models.CASCADE, null=True, blank=True, 
-                                help_text="Specific edition in this collection")
+    biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE)
     personal_rating = models.PositiveIntegerField(
         null=True, 
         blank=True,
@@ -46,27 +41,18 @@ class CollectionBook(BaseModel):
     personal_notes = models.TextField(blank=True)
     
     class Meta:
-        db_table = f'{app_label}_collection_books'
-        unique_together = ['collection', 'book', 'edition']
+        db_table = f'{app_label}_collection_biblios'
+        unique_together = ['collection', 'biblio']
         indexes = [
             models.Index(fields=['collection']),
-            models.Index(fields=['book']),
-            models.Index(fields=['edition']),
+            models.Index(fields=['biblio']),
             models.Index(fields=['created_at']),
         ]
-    
-    def save(self, *args, **kwargs):
-        # If no edition specified, use the primary edition
-        if not self.edition and self.book:
-            self.edition = self.book.editions.filter(is_primary=True).first()
-        super().save(*args, **kwargs)
 
 
 class ReadingSession(BaseModel):
     """Individual reading sessions for detailed tracking"""
-    book = models.ForeignKey('library.Book', on_delete=models.CASCADE, related_name='reading_sessions')
-    edition = models.ForeignKey('library.Edition', on_delete=models.CASCADE, related_name='reading_sessions',
-                                help_text="Specific edition being read")
+    biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE, related_name='reading_sessions')
     start_page = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     end_page = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     start_time = models.DateTimeField()
@@ -78,11 +64,9 @@ class ReadingSession(BaseModel):
         db_table = f'{app_label}_reading_sessions'
         indexes = [
             models.Index(fields=['created_by']),
-            models.Index(fields=['book']),
-            models.Index(fields=['edition']),
+            models.Index(fields=['biblio']),
             models.Index(fields=['start_time']),
-            models.Index(fields=['created_by', 'book', 'start_time']),
-            models.Index(fields=['created_by', 'edition', 'start_time']),
+            models.Index(fields=['created_by', 'biblio', 'start_time']),
         ]
         constraints = [
             models.CheckConstraint(
@@ -100,16 +84,12 @@ class ReadingSession(BaseModel):
         if self.start_time and self.end_time and not self.duration_minutes:
             delta = self.end_time - self.start_time
             self.duration_minutes = int(delta.total_seconds() / 60)
-            
-        # If no edition specified, use the primary edition
-        if not self.edition and self.book:
-            self.edition = self.book.editions.filter(is_primary=True).first()
-            
+
         super().save(*args, **kwargs)
 
 
 class ReadingProgress(BaseModel):
-    """Current reading state for each user-book-edition combination"""
+    """Current reading state for each user-biblio combination"""
     
     STATUS_CHOICES = [
         ('not_started', 'Not Started'),
@@ -119,9 +99,7 @@ class ReadingProgress(BaseModel):
         ('dropped', 'Dropped'),
     ]
     
-    book = models.ForeignKey('library.Book', on_delete=models.CASCADE, related_name='reading_progress')
-    edition = models.ForeignKey('library.Edition', on_delete=models.CASCADE, related_name='reading_progress',
-                                help_text="Specific edition being read")
+    biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE, related_name='reading_progress')
     current_page = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     total_pages_read = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
     progress_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -133,13 +111,11 @@ class ReadingProgress(BaseModel):
 
     class Meta:
         db_table = f'{app_label}_reading_progress'
-        unique_together = ['created_by', 'book', 'edition']
+        unique_together = ['created_by', 'biblio']
         indexes = [
             models.Index(fields=['created_by']),
-            models.Index(fields=['book']),
-            models.Index(fields=['edition']),
-            models.Index(fields=['created_by', 'book']),
-            models.Index(fields=['created_by', 'edition']),
+            models.Index(fields=['biblio']),
+            models.Index(fields=['created_by', 'biblio']),
             models.Index(fields=['reading_status']),
             models.Index(fields=['last_read_at']),
             models.Index(fields=['progress_percentage']),
@@ -152,18 +128,14 @@ class ReadingProgress(BaseModel):
         ]
     
     def save(self, *args, **kwargs):
-        # If no edition specified, use the primary edition
-        if not self.edition and self.book:
-            self.edition = self.book.editions.filter(is_primary=True).first()
-            
-        # Auto-calculate progress percentage based on edition's total pages
-        if self.edition and self.edition.total_pages > 0:
+        # Auto-calculate progress percentage based on biblio's total pages
+        if self.biblio and self.biblio.total_pages > 0:
             self.progress_percentage = round(
-                (self.total_pages_read / self.edition.total_pages) * 100, 2
+                (self.total_pages_read / self.biblio.total_pages) * 100, 2
             )
         
         # Auto-set completion status and timestamp
-        if self.edition and self.current_page >= self.edition.total_pages and self.reading_status != 'completed':
+        if self.current_page >= self.biblio.total_pages and self.reading_status != 'completed':
             self.reading_status = 'completed'
             if not self.completed_at:
                 self.completed_at = timezone.now()
@@ -171,45 +143,35 @@ class ReadingProgress(BaseModel):
         super().save(*args, **kwargs)
     
     def __str__(self):
-        edition_info = f" ({self.edition.edition_number})" if self.edition.edition_number else ""
-        return f"{self.created_by.username} - {self.book.title}{edition_info} ({self.progress_percentage}%)"
+        return f"{self.created_by.username} - {self.biblio.title} ({self.progress_percentage}%)"
 
 
-class Bookmark(BaseModel):
-    """User bookmarks for specific pages in specific editions"""
-    book = models.ForeignKey('library.Book', on_delete=models.CASCADE, related_name='bookmarks')
-    edition = models.ForeignKey('library.Edition', on_delete=models.CASCADE, related_name='bookmarks',
-                                help_text="Specific edition this bookmark refers to")
+
+class Bibliomark(BaseModel):
+    """User bibliomarks for specific pages in specific biblios"""
+    biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE, related_name='bibliomarks')
     page_number = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     title = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
     
     class Meta:
-        db_table = f'{app_label}_bookmarks'
-        unique_together = ['created_by', 'book', 'edition', 'page_number']
+        db_table = f'{app_label}_bibliomarks'
+        unique_together = ['created_by', 'biblio', 'page_number']
         indexes = [
-            models.Index(fields=['created_by', 'book']),
-            models.Index(fields=['created_by', 'edition']),
-            models.Index(fields=['book', 'page_number']),
-            models.Index(fields=['edition', 'page_number']),
+            models.Index(fields=['created_by', 'biblio']),
+            models.Index(fields=['biblio', 'page_number']),
         ]
     
-    def save(self, *args, **kwargs):
-        # If no edition specified, use the primary edition
-        if not self.edition and self.book:
-            self.edition = self.book.editions.filter(is_primary=True).first()
-        super().save(*args, **kwargs)
-    
     def __str__(self):
-        edition_info = f" ({self.edition.edition_number})" if self.edition.edition_number else ""
-        return f"{self.created_by.username} - {self.book.title}{edition_info} p.{self.page_number}"
+        return f"{self.created_by.username} - {self.biblio.title} p.{self.page_number}"
+
 
 
 class ReadingGoal(BaseModel):
     """User reading goals and targets"""
     
     GOAL_TYPE_CHOICES = [
-        ('books_per_year', 'Books per Year'),
+        ('biblios_per_year', 'Biblios per Year'),
         ('pages_per_day', 'Pages per Day'),
         ('minutes_per_day', 'Minutes per Day'),
     ]
@@ -236,17 +198,17 @@ class ReadingGoal(BaseModel):
 
 # Custom managers for common queries
 class CurrentlyReadingManager(models.Manager):
-    """Manager for currently reading books"""
+    """Manager for currently reading biblios"""
     def get_queryset(self):
         return super().get_queryset().filter(reading_status='reading')
 
 
-class CompletedBooksManager(models.Manager):
-    """Manager for completed books"""
+class CompletedBibliosManager(models.Manager):
+    """Manager for completed biblios"""
     def get_queryset(self):
         return super().get_queryset().filter(reading_status='completed')
 
 
 # Add custom managers to ReadingProgress
 ReadingProgress.add_to_class('currently_reading', CurrentlyReadingManager())
-ReadingProgress.add_to_class('completed', CompletedBooksManager())
+ReadingProgress.add_to_class('completed', CompletedBibliosManager())

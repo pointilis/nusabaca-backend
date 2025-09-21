@@ -13,6 +13,5 @@ class LibraryConfig(AppConfig):
         from apps.library import models  # noqa
 
         # Connect signals
-        post_save.connect(signals.update_book_search_vector, sender=models.Book)
-        post_save.connect(signals.update_book_search_vector, sender=models.Edition)
+        post_save.connect(signals.update_biblio_search_vector, sender=models.Biblio)
         post_save.connect(signals.update_author_search_vector, sender=models.Author)

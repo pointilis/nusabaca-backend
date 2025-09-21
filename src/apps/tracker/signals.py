@@ -6,7 +6,7 @@ def update_reading_progress_from_session(sender, instance, created, **kwargs):
     if created:
         progress, created = ReadingProgress.objects.get_or_create(
             user=instance.user,
-            book=instance.book,
+            biblio=instance.biblio,
             defaults={
                 'current_page': instance.end_page,
                 'total_pages_read': instance.end_page,

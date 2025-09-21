@@ -142,10 +142,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'taggit',
     'django_celery_results',
     'apps.ocr',
     'apps.tracker',
     'apps.library',
+    'apps.audiobook',
 ]
 
 MIDDLEWARE = [
@@ -236,7 +238,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Google Cloud settings
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 GOOGLE_CLOUD_PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT_ID', 'nusabaca')
-GOOGLE_CLOUD_STORAGE_BUCKET = os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET', 'nusabaca_book_bucket')
+GOOGLE_CLOUD_STORAGE_BUCKET = os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET', 'nusabaca_biblio_bucket')
 
 # Alternative names for backwards compatibility
 GCS_BUCKET_NAME = GOOGLE_CLOUD_STORAGE_BUCKET
