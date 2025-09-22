@@ -25,10 +25,10 @@ class OCRTaskProcessor:
     
     def __init__(self):
         # Store configuration variables
-        self.bucket_name = getattr(settings, 'GCS_BUCKET_NAME', os.getenv('GCS_BUCKET_NAME'))
+        self.bucket_name = getattr(settings, 'GOOGLE_CLOUD_PAGE_BUCKET', os.getenv('GOOGLE_CLOUD_PAGE_BUCKET'))
         self.service_account_path = getattr(settings, 'GOOGLE_APPLICATION_CREDENTIALS', 
                                           os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
-        self.project_id = getattr(settings, 'GCS_PROJECT_ID', os.getenv('GCS_PROJECT_ID'))
+        self.project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', os.getenv('GOOGLE_CLOUD_PROJECT_ID'))
         
         # Initialize client placeholders
         self.storage_client = None
@@ -169,7 +169,7 @@ class TTSTaskProcessor:
 
 
 # Global task processor instances
-task_processor = OCRTaskProcessor()
+ocr_task_processor = OCRTaskProcessor()
 tts_task_processor = TTSTaskProcessor()
 
 
@@ -200,17 +200,17 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
     
     try:
         # Initialize progress tracking
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'PROCESSING', 0, 
             'Initializing OCR processing...'
         )
         
         # Check if task processor is ready
-        if not task_processor.is_ready():
+        if not ocr_task_processor.is_ready():
             error_msg = "Google Cloud services not available"
             logger.error(f"[{request_id}] {error_msg}")
             
-            task_processor.update_task_status(
+            ocr_task_processor.update_task_status(
                 task_id, 'FAILURE', 0, error_msg,
                 {'error': error_msg, 'retry_count': self.request.retries}
             )
@@ -228,15 +228,16 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
             }
         
         # Generate file paths
+        biblio = user_metadata.get('biblio', {}) if user_metadata else {}
+        biblio_id = biblio.get('id', 'unknown')
+        page_number = biblio.get('page_number', 1)
         timestamp = datetime.now().strftime('%Y/%m/%d')
         file_extension = os.path.splitext(filename)[1].lower()
         clean_filename = os.path.splitext(filename)[0][:50]
-        
-        uploaded_file_path = f"uploads/{timestamp}/{request_id}_{clean_filename}{file_extension}"
-        results_file_path = f"results/{timestamp}/{request_id}_results.json"
-        
+        blob_path = f"pages/{timestamp}/{biblio_id}_{page_number}_{clean_filename}{file_extension}"
+
         # Step 1: Upload file to Google Cloud Storage (20% progress)
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'PROCESSING', 20,
             f'Uploading file to Google Cloud Storage: {filename}'
         )
@@ -255,9 +256,9 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
         if user_metadata:
             upload_metadata.update({f'user_{k}': str(v) for k, v in user_metadata.items()})
         
-        storage_upload_result = task_processor.storage_client.upload_from_memory(
+        storage_upload_result = ocr_task_processor.storage_client.upload_from_memory(
             file_data=file_data,
-            destination_blob_name=uploaded_file_path,
+            destination_blob_name=blob_path,
             content_type=content_type,
             metadata=upload_metadata
         )
@@ -266,7 +267,7 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
             error_msg = f"Failed to upload file to storage: {storage_upload_result['message']}"
             logger.error(f"[{request_id}] {error_msg}")
             
-            task_processor.update_task_status(
+            ocr_task_processor.update_task_status(
                 task_id, 'FAILURE', 20, error_msg,
                 {'error': error_msg, 'storage_result': storage_upload_result}
             )
@@ -280,10 +281,10 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
                 'user_metadata': user_metadata or {}
             }
         
-        logger.info(f"[{request_id}] File uploaded successfully: {uploaded_file_path}")
+        logger.info(f"[{request_id}] File uploaded successfully: {blob_path}")
         
         # Step 2: Process OCR (40% progress)
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'PROCESSING', 40,
             f'Processing OCR with format: {extract_format}'
         )
@@ -293,10 +294,10 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
         # Perform OCR based on format
         if extract_format == 'structured':
             logger.info(f"[{request_id}] Starting structured document OCR processing")
-            ocr_result = task_processor.vision_client.detect_document_text(file_data)
+            ocr_result = ocr_task_processor.vision_client.detect_document_text(file_data)
         else:
             logger.info(f"[{request_id}] Starting standard text OCR processing")
-            ocr_result = task_processor.vision_client.detect_text(file_data)
+            ocr_result = ocr_task_processor.vision_client.detect_text(file_data)
         
         ocr_processing_time = (datetime.now() - ocr_start_time).total_seconds()
         
@@ -304,7 +305,7 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
             error_msg = f"OCR processing failed: {ocr_result['message']}"
             logger.error(f"[{request_id}] {error_msg}")
             
-            task_processor.update_task_status(
+            ocr_task_processor.update_task_status(
                 task_id, 'FAILURE', 40, error_msg,
                 {
                     'error': error_msg,
@@ -326,74 +327,25 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
         logger.info(f"[{request_id}] OCR processing completed successfully in {ocr_processing_time:.2f}s")
         
         # Step 3: Store results (70% progress)
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'PROCESSING', 70,
             'Storing OCR results to Google Cloud Storage'
         )
-        
-        # Prepare comprehensive results
-        results_data = {
-            'processing_id': request_id,
-            'task_id': task_id,
-            'original_file': {
-                'name': filename,
-                'size': len(file_data),
-                'content_type': content_type,
-                'gcs_path': uploaded_file_path,
-                'gs_url': storage_upload_result['gs_url']
-            },
-            'processing_info': {
-                'language': language,
-                'extract_format': extract_format,
-                'confidence_threshold': confidence_threshold,
-                'processing_time': round(ocr_processing_time, 2),
-                'processed_at': datetime.now().isoformat(),
-                'task_started_at': self.request.eta.isoformat() if self.request.eta else None
-            },
-            'ocr_results': ocr_result,
-            'user_metadata': user_metadata or {}
-        }
-        
-        results_json = json.dumps(results_data, indent=2, ensure_ascii=False)
-        
-        results_upload = task_processor.storage_client.upload_from_memory(
-            file_data=results_json.encode('utf-8'),
-            destination_blob_name=results_file_path,
-            content_type='application/json',
-            metadata={
-                'request_id': request_id,
-                'task_id': task_id,
-                'result_type': 'ocr_results',
-                'original_file': filename,
-                'processing_time': str(round(ocr_processing_time, 2)),
-                'text_length': str(len(ocr_result.get('full_text', '')))
-            }
-        )
-        
-        if not results_upload['success']:
-            logger.warning(f"[{request_id}] Failed to store results: {results_upload['message']}")
-        
+
         # Step 4: Generate signed URLs (90% progress)
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'PROCESSING', 90,
             'Generating secure access URLs'
         )
         
         # Generate signed URLs for temporary access
         signed_url_result = None
-        results_signed_url = None
-        
+
         try:
             # Original file signed URL (1 hour)
-            signed_url_result = task_processor.storage_client.generate_signed_url(
-                uploaded_file_path, expiration_minutes=60
+            signed_url_result = ocr_task_processor.storage_client.generate_signed_url(
+                blob_path, expiration_minutes=60
             )
-            
-            # Results file signed URL (24 hours)
-            if results_upload['success']:
-                results_signed_url = task_processor.storage_client.generate_signed_url(
-                    results_file_path, expiration_minutes=1440
-                )
                 
         except Exception as e:
             logger.warning(f"[{request_id}] Failed to generate signed URLs: {str(e)}")
@@ -411,19 +363,10 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
                 'content_type': content_type
             },
             'storage_info': {
-                'original_file': {
-                    'gcs_path': uploaded_file_path,
-                    'gs_url': storage_upload_result['gs_url'],
-                    'signed_url': signed_url_result['signed_url'] if signed_url_result and signed_url_result['success'] else None,
-                    'signed_url_expires_at': signed_url_result['expires_at'] if signed_url_result and signed_url_result['success'] else None
-                },
-                'results_file': {
-                    'gcs_path': results_file_path if results_upload['success'] else None,
-                    'gs_url': results_upload['gs_url'] if results_upload['success'] else None,
-                    'signed_url': results_signed_url['signed_url'] if results_signed_url and results_signed_url['success'] else None,
-                    'signed_url_expires_at': results_signed_url['expires_at'] if results_signed_url and results_signed_url['success'] else None,
-                    'size': results_upload['size'] if results_upload['success'] else None
-                }
+                'gcs_path': blob_path,
+                'gs_url': storage_upload_result['gs_url'],
+                'signed_url': signed_url_result['signed_url'] if signed_url_result and signed_url_result['success'] else None,
+                'signed_url_expires_at': signed_url_result['expires_at'] if signed_url_result and signed_url_result['success'] else None
             },
             'ocr_result': {
                 'full_text': ocr_result.get('full_text', ''),
@@ -445,7 +388,7 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
             final_result['ocr_result']['pages'] = ocr_result['pages']
         
         # Update final status
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'SUCCESS', 100,
             'OCR processing completed successfully',
             final_result
@@ -462,7 +405,7 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
         error_msg = f"Unexpected error in background OCR task: {str(e)}"
         logger.error(f"[{request_id}] {error_msg}", exc_info=True)
         
-        task_processor.update_task_status(
+        ocr_task_processor.update_task_status(
             task_id, 'FAILURE', 0, error_msg,
             {
                 'error': error_msg,
@@ -600,7 +543,8 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
                 pitch=pitch,
                 volume_gain_db=volume_gain_db,
                 save_to_file=True,
-                file_prefix=file_prefix
+                file_prefix=file_prefix,
+                user_metadata=user_metadata
             )
             
             tts_processing_time = (datetime.now() - tts_start_time).total_seconds()
@@ -666,16 +610,7 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
                 'pitch': pitch,
                 'volume_gain_db': volume_gain_db
             },
-            'storage_info': {
-                'storage_type': tts_result.get('storage_type', 'unknown'),
-                'upload_success': tts_result.get('upload_success', False),
-                'file_path': tts_result.get('file_path'),
-                'file_url': tts_result.get('file_url'),
-                'filename': tts_result.get('filename'),
-                'gcs_blob_name': tts_result.get('gcs_blob_name'),
-                'bucket_name': tts_result.get('bucket_name'),
-                'signed_url_expires_at': tts_result.get('signed_url_expires_at')
-            },
+            'storage_info': tts_result.get('storage_info', {}),
             'processing_info': {
                 'processing_time': round(tts_processing_time, 2),
                 'processed_at': datetime.now().isoformat(),
@@ -726,7 +661,7 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
 
 
 @shared_task
-def get_task_status(task_id: str) -> Dict[str, Any]:
+def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
     """
     Get the current status of an OCR processing task.
     
@@ -969,7 +904,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
             logger.error(f"Error querying django_celery_results directly: {str(e)}")
         
         # Fallback to calling the Celery task (less efficient but works)
-        return get_task_status.delay(task_id).get()
+        return get_ocr_task_status.delay(task_id).get()
         
     except Exception as e:
         logger.error(f"Failed to get OCR task status for {task_id}: {str(e)}")

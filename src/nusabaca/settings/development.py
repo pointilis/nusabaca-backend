@@ -1,4 +1,4 @@
-import platform
+import os
 
 from .base import * # noqa
 from .celery_config import *  # noqa
@@ -15,4 +15,22 @@ DATABASES = {
         'HOST': '127.0.0.1',  # Or your database server's IP/hostname
         'PORT': '5432',  # Leave empty for default, or specify port if needed
     }
+}
+
+# ref: https://django-storages.readthedocs.io/en/latest/backends/gcloud.html
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+          "bucket_name": GOOGLE_CLOUD_PAGE_BUCKET,
+          "project_id": GOOGLE_CLOUD_PROJECT_ID,
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": "nusabaca_staticfiles",
+        }
+    },
 }

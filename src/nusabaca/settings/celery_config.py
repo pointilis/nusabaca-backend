@@ -30,7 +30,7 @@ CELERY_TASK_ROUTES = {
         'queue': 'ocr_processing',
         'routing_key': 'ocr.process',
     },
-    'apps.ocr.tasks.get_task_status': {
+    'apps.ocr.tasks.get_ocr_task_status': {
         'queue': 'status_check', 
         'routing_key': 'status.check',
     },
@@ -39,6 +39,10 @@ CELERY_TASK_ROUTES = {
     'apps.ocr.tasks.process_tts_generation': {
         'queue': 'tts_processing',
         'routing_key': 'tts.process',
+    },
+    'apps.ocr.tasks.get_tts_task_status': {
+        'queue': 'status_check',
+        'routing_key': 'status.check',
     },
 }
 

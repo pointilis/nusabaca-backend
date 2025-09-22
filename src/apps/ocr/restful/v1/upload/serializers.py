@@ -132,7 +132,9 @@ class FileSerializer(serializers.Serializer):
         # Common language codes supported by Google Vision API
         supported_languages = [
             'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh',
-            'ar', 'hi', 'th', 'vi', 'nl', 'sv', 'da', 'no', 'fi', 'pl'
+            'ar', 'hi', 'th', 'vi', 'nl', 'sv', 'da', 'no', 'fi', 'pl',
+            'id', 'tr', 'el', 'he', 'ro', 'hu', 'cs', 'sk', 'uk', 'bg',
+            'hr', 'lt', 'lv', 'et', 'sl', 'sr',
         ]
         
         if language and language.lower() not in supported_languages:
@@ -173,41 +175,3 @@ class FileSerializer(serializers.Serializer):
             data['file_info'] = self.get_file_info()
         
         return data
-
-
-class FileUploadResponseSerializer(serializers.Serializer):
-    """
-    Serializer for file upload response data.
-    """
-    
-    success = serializers.BooleanField()
-    message = serializers.CharField()
-    file_info = serializers.DictField(required=False)
-    processing_id = serializers.CharField(required=False)
-    
-    # OCR results (when processing is complete)
-    ocr_result = serializers.DictField(required=False)
-
-
-class OCRResultSerializer(serializers.Serializer):
-    """
-    Serializer for OCR processing results.
-    """
-    
-    processing_id = serializers.CharField()
-    status = serializers.ChoiceField(
-        choices=[
-            ('pending', 'Pending'),
-            ('processing', 'Processing'), 
-            ('completed', 'Completed'),
-            ('failed', 'Failed')
-        ]
-    )
-    full_text = serializers.CharField(allow_blank=True)
-    confidence = serializers.FloatField(required=False)
-    text_blocks = serializers.ListField(required=False)
-    pages = serializers.ListField(required=False)
-    processing_time = serializers.FloatField(required=False)
-    error_message = serializers.CharField(required=False, allow_blank=True)
-    created_at = serializers.DateTimeField(required=False)
-    completed_at = serializers.DateTimeField(required=False)

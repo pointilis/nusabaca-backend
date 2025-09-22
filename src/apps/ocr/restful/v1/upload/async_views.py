@@ -36,27 +36,27 @@ class AsyncUploadAPIView(APIView):
         
         try:
             # Validate the uploaded file
-            file_serializer = FileSerializer(data=request.data)
+            serializer = FileSerializer(data=request.data)
 
-            if not file_serializer.is_valid():
-                logger.warning(f"File validation failed: {file_serializer.errors}")
+            if not serializer.is_valid():
+                logger.warning(f"File validation failed: {serializer.errors}")
                 return Response(
                     {
                         'success': False,
                         'message': 'File validation failed',
-                        'errors': file_serializer.errors
+                        'errors': serializer.errors
                     }, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            file = file_serializer.validated_data['file']
-            language = file_serializer.validated_data.get('language', 'en')
-            extract_format = file_serializer.validated_data.get('extract_format', 'text')
-            confidence_threshold = file_serializer.validated_data.get('confidence_threshold', 0.8)
+            file = serializer.validated_data['file']
+            language = serializer.validated_data.get('language', 'en')
+            extract_format = serializer.validated_data.get('extract_format', 'text')
+            confidence_threshold = serializer.validated_data.get('confidence_threshold', 0.8)
             
             # Biblio datasheet
-            biblio = file_serializer.validated_data.get('biblio', None)
-            page_number = file_serializer.validated_data.get('page_number', None)
+            biblio = serializer.validated_data.get('biblio', None)
+            page_number = serializer.validated_data.get('page_number', None)
             biblio_info = {
                 'id': str(biblio.id) if biblio else None,
                 'page_number': page_number if page_number else None
@@ -97,7 +97,7 @@ class AsyncUploadAPIView(APIView):
                 'message': 'File uploaded successfully. Processing in background.',
                 'task_id': task_id,
                 'status': 'PENDING',
-                'file_info': file_serializer.get_file_info(),
+                'file_info': serializer.get_file_info(),
                 'processing_options': {
                     'language': language,
                     'extract_format': extract_format,

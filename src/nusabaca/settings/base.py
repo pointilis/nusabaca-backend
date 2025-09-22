@@ -239,9 +239,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Google Cloud settings
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 GOOGLE_CLOUD_PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT_ID', 'nusabaca')
-GOOGLE_CLOUD_STORAGE_BUCKET = os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET', 'nusabaca_biblio_bucket')
+GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_biblio_bucket')
 GOOGLE_CLOUD_TTS_BUCKET = os.getenv('GOOGLE_CLOUD_TTS_BUCKET', 'nusabaca_tts_bucket')
-
-# Alternative names for backwards compatibility
-GCS_BUCKET_NAME = GOOGLE_CLOUD_STORAGE_BUCKET
-GCS_PROJECT_ID = GOOGLE_CLOUD_PROJECT_ID
+GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_page_bucket')

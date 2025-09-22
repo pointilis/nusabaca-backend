@@ -12,7 +12,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from django.conf import settings
 
-from .serializers import FileSerializer, FileUploadResponseSerializer
+from .serializers import FileSerializer
 from apps.ocr.lib.google_vision import GoogleCloudVision
 from apps.ocr.lib.google_storage import GoogleCloudStorage
 
@@ -33,7 +33,7 @@ class UploadAPIView(APIView):
         self.storage_client = None
         self.vision_client = None
         self.project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', os.getenv('GOOGLE_CLOUD_PROJECT_ID'))
-        self.bucket_name = getattr(settings, 'GOOGLE_CLOUD_STORAGE_BUCKET', os.getenv('GOOGLE_CLOUD_STORAGE_BUCKET'))
+        self.bucket_name = getattr(settings, 'GOOGLE_CLOUD_PAGE_BUCKET', os.getenv('GOOGLE_CLOUD_PAGE_BUCKET'))
         self.service_account_path = getattr(settings, 'GOOGLE_APPLICATION_CREDENTIALS', os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
         self._init_storage_client()
         self._init_vision_client()
