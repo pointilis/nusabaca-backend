@@ -37,7 +37,7 @@ class AsyncUploadAPIView(APIView):
         try:
             # Validate the uploaded file
             file_serializer = FileSerializer(data=request.data)
-            
+
             if not file_serializer.is_valid():
                 logger.warning(f"File validation failed: {file_serializer.errors}")
                 return Response(
@@ -54,6 +54,14 @@ class AsyncUploadAPIView(APIView):
             extract_format = file_serializer.validated_data.get('extract_format', 'text')
             confidence_threshold = file_serializer.validated_data.get('confidence_threshold', 0.8)
             
+            # Biblio datasheet
+            biblio = file_serializer.validated_data.get('biblio', None)
+            page_number = file_serializer.validated_data.get('page_number', None)
+            biblio_info = {
+                'id': str(biblio.id) if biblio else None,
+                'page_number': page_number if page_number else None
+            }
+            
             logger.info(f"Submitting async OCR task for file: {file.name} ({file.size} bytes)")
             
             # Read file data
@@ -66,6 +74,7 @@ class AsyncUploadAPIView(APIView):
                 'user_ip': request.META.get('REMOTE_ADDR', 'unknown'),
                 'user_agent': request.META.get('HTTP_USER_AGENT', 'unknown')[:200],  # Limit length
                 'submitted_at': str(request.META.get('HTTP_DATE', '')),
+                'biblio': biblio_info,
             }
             
             # Submit task to Celery

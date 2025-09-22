@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.contenttypes.admin import GenericStackedInline
 from django.utils.html import format_html
 from django.db.models import Q
-from apps.library.models import * # Import all models
+from .models import * # Import all models
 
 
 @admin.register(Author)

@@ -6,3 +6,6 @@ class OcrConfig(AppConfig):
     name = 'apps.ocr'
     label = 'ocr'
     verbose_name = 'OCR Application'
+
+    def ready(self):
+        import apps.ocr.signals  # noqa

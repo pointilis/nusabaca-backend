@@ -17,15 +17,12 @@ def audio_file_path(instance, filename):
 
 class Recognition(BaseModel):
     """OCR text recognition results for specific pages in biblios"""
+    task_id = models.CharField(max_length=100, unique=True, help_text="Unique ID for the OCR processing task")
     biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE, related_name='page_recognitions')
     page_number = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     full_text = models.TextField(help_text="The complete processed text content")
-    confidence = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
-                                   help_text="Confidence score for the text processing (0.0 to 1.0)")
-    processing_time = models.FloatField(validators=[MinValueValidator(0.0)],
-                                        help_text="Time taken to process the text in seconds")
     language = models.CharField(max_length=10, default='en', help_text="Language code (e.g., 'en' for English)")
-    results = models.JSONField(blank=True, null=True, help_text="Raw OCR results in JSON format")
+    result = models.JSONField(blank=True, null=True, help_text="Raw OCR results in JSON format")
     
     class Meta:
         db_table = f'{app_label}_page_recognitions'

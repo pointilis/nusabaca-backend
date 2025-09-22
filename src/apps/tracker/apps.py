@@ -1,5 +1,5 @@
 from django.apps import AppConfig
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save
 
 
 class TrackerConfig(AppConfig):
@@ -14,4 +14,4 @@ class TrackerConfig(AppConfig):
 
         # Connect signals
         post_save.connect(signals.update_reading_progress_from_session,
-                          sender=models.ReadingSession)
+                          sender=models.ReadingSession, dispatch_uid='reading_session_save')

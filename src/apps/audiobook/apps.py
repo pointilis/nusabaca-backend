@@ -6,3 +6,6 @@ class AudiobookConfig(AppConfig):
     name = 'apps.audiobook'
     label = 'audiobook'
     verbose_name = 'Audiobook Application'
+
+    def ready(self):
+        import apps.audiobook.signals  # noqa

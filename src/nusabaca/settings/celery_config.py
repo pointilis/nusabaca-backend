@@ -25,6 +25,7 @@ CELERY_ENABLE_UTC = True
 
 # Task routing and execution
 CELERY_TASK_ROUTES = {
+    # OCR processing tasks
     'apps.ocr.tasks.process_ocr_upload': {
         'queue': 'ocr_processing',
         'routing_key': 'ocr.process',
@@ -32,7 +33,13 @@ CELERY_TASK_ROUTES = {
     'apps.ocr.tasks.get_task_status': {
         'queue': 'status_check', 
         'routing_key': 'status.check',
-    }
+    },
+
+    # TTS processing tasks
+    'apps.ocr.tasks.process_tts_generation': {
+        'queue': 'tts_processing',
+        'routing_key': 'tts.process',
+    },
 }
 
 # Task execution settings

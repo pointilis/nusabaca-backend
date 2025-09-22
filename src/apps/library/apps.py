@@ -1,5 +1,5 @@
 from django.apps import AppConfig
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save
 
 
 class LibraryConfig(AppConfig):
@@ -13,5 +13,7 @@ class LibraryConfig(AppConfig):
         from apps.library import models  # noqa
 
         # Connect signals
-        post_save.connect(signals.update_biblio_search_vector, sender=models.Biblio)
-        post_save.connect(signals.update_author_search_vector, sender=models.Author)
+        post_save.connect(signals.update_biblio_search_vector, 
+                          sender=models.Biblio, dispatch_uid='biblio_save')
+        post_save.connect(signals.update_author_search_vector, 
+                          sender=models.Author, dispatch_uid='author_save')
