@@ -10,7 +10,7 @@ class AuthorAdmin(admin.ModelAdmin):
     list_display = ['name', 'nationality', 'birth_date', 'biblio_count']
     list_filter = ['nationality', 'birth_date']
     search_fields = ['name', 'bio']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'modified_at']
     
     def biblio_count(self, obj):
         return obj.biblios.count()
@@ -21,7 +21,7 @@ class AuthorAdmin(admin.ModelAdmin):
 class PublisherAdmin(admin.ModelAdmin):
     list_display = ['name', 'website', 'biblio_count']
     search_fields = ['name']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'modified_at']
     
     def biblio_count(self, obj):
         return obj.biblio_set.count()
@@ -71,7 +71,7 @@ class BiblioAdmin(admin.ModelAdmin):
     list_display = ['title']
     list_filter = ['language']
     search_fields = ['title', 'isbn', 'issn', 'description']
-    readonly_fields = ['created_at', 'updated_at', 'cover_preview']
+    readonly_fields = ['created_at', 'modified_at', 'cover_preview']
     inlines = [TaggedGenreInline, AuthorInline, PublisherInline, CoverInline]
     
     def cover_preview(self, obj):

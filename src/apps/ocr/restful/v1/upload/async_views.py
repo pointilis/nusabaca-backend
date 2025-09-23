@@ -177,7 +177,7 @@ class TaskStatusAPIView(APIView):
                 'status': user_status,
                 'progress': task_status.get('progress', 0),
                 'message': task_status.get('message', ''),
-                'updated_at': task_status.get('updated_at'),
+                'modified_at': task_status.get('modified_at'),
             }
             
             # Add results if task is completed successfully

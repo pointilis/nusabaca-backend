@@ -1,9 +1,8 @@
-from django.db import transaction
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 
 from apps.library.models import Biblio
-from .serializers import BiblioSerializer, BiblioCreateUpdateSerializer
+from .serializers import BiblioCreateUpdateSerializer
 
 
 class BiblioList(generics.ListCreateAPIView):
@@ -12,3 +11,4 @@ class BiblioList(generics.ListCreateAPIView):
     """
     queryset = Biblio.objects.all()
     serializer_class = BiblioCreateUpdateSerializer
+    permission_classes = [IsAuthenticated]

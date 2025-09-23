@@ -77,7 +77,7 @@ class OCRTaskProcessor:
                 'status': status,
                 'progress': progress,
                 'message': message,
-                'updated_at': datetime.now().isoformat(),
+                'modified_at': datetime.now().isoformat(),
                 'result': result or {}
             }
             
@@ -143,7 +143,7 @@ class TTSTaskProcessor:
                 'status': status,
                 'progress': progress,
                 'message': message,
-                'updated_at': datetime.now().isoformat(),
+                'modified_at': datetime.now().isoformat(),
                 'result': result or {}
             }
             
@@ -702,7 +702,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
                     'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
                     'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
                     'result': result_data if isinstance(result_data, dict) else {},
-                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'modified_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
                     'created_at': task_result.date_created.isoformat(),
                     'task_name': task_result.task_name or 'unknown',
                     'worker': task_result.worker or 'unknown'
@@ -722,7 +722,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
             'progress': result.info.get('progress', 0) if result.info else 0,
             'message': result.info.get('message', '') if result.info else '',
             'result': result.info.get('result', {}) if result.info else {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
         
     except Exception as e:
@@ -733,7 +733,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
             'progress': 0,
             'message': f'Failed to retrieve task status: {str(e)}',
             'result': {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
 
 
@@ -779,7 +779,7 @@ def get_tts_task_status(task_id: str) -> Dict[str, Any]:
                     'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
                     'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
                     'result': result_data if isinstance(result_data, dict) else {},
-                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'modified_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
                     'created_at': task_result.date_created.isoformat(),
                     'task_name': task_result.task_name or 'unknown',
                     'worker': task_result.worker or 'unknown'
@@ -799,7 +799,7 @@ def get_tts_task_status(task_id: str) -> Dict[str, Any]:
             'progress': result.info.get('progress', 0) if result.info else 0,
             'message': result.info.get('message', '') if result.info else '',
             'result': result.info.get('result', {}) if result.info else {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
         
     except Exception as e:
@@ -810,7 +810,7 @@ def get_tts_task_status(task_id: str) -> Dict[str, Any]:
             'progress': 0,
             'message': f'Failed to retrieve task status: {str(e)}',
             'result': {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
 
 
@@ -893,7 +893,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
                     'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
                     'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
                     'result': result_data if isinstance(result_data, dict) else {},
-                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'modified_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
                     'created_at': task_result.date_created.isoformat(),
                     'task_name': task_result.task_name or 'unknown',
                     'worker': task_result.worker or 'unknown'
@@ -914,7 +914,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
             'progress': 0,
             'message': f'Failed to retrieve task status: {str(e)}',
             'result': {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
 
 
@@ -1001,7 +1001,7 @@ def get_tts_task_status_sync(task_id: str) -> Dict[str, Any]:
                     'progress': result_data.get('progress', 0) if isinstance(result_data, dict) else 0,
                     'message': result_data.get('message', '') if isinstance(result_data, dict) else '',
                     'result': result_data if isinstance(result_data, dict) else {},
-                    'updated_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
+                    'modified_at': task_result.date_done.isoformat() if task_result.date_done else task_result.date_created.isoformat(),
                     'created_at': task_result.date_created.isoformat(),
                     'task_name': task_result.task_name or 'unknown',
                     'worker': task_result.worker or 'unknown'
@@ -1022,7 +1022,7 @@ def get_tts_task_status_sync(task_id: str) -> Dict[str, Any]:
             'progress': 0,
             'message': f'Failed to retrieve task status: {str(e)}',
             'result': {},
-            'updated_at': datetime.now().isoformat()
+            'modified_at': datetime.now().isoformat()
         }
 
 

@@ -33,7 +33,7 @@ class BiblioCreateUpdateSerializer(serializers.ModelSerializer):
             'description', 'original_publication_date', 'language',
             'authors', 'genres', 'publishers', 'total_pages', 'file_format',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'modified_at']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -157,7 +157,7 @@ class BiblioSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'isbn', 'issn', 'original_title', 
             'description', 'original_publication_date', 'language',
-            'authors', 'genres', 'publishers', 'created_at', 'updated_at'
+            'authors', 'genres', 'publishers', 'created_at', 'modified_at'
         ]
 
     def get_authors(self, obj):

@@ -149,6 +149,14 @@ INSTALLED_APPS = [
     'apps.tracker',
     'apps.library',
     'apps.audiobook',
+
+    'allauth',
+    'allauth.account',
+    'allauth.headless',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -159,6 +167,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # Added middleware for tracking created_by and modified_by fields
+    'apps.core.middleware.WhodidMiddleware',
+
+    # Add the account middleware:
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'nusabaca.urls'
@@ -242,3 +256,47 @@ GOOGLE_CLOUD_PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT_ID', 'nusabaca')
 GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_biblio_bucket')
 GOOGLE_CLOUD_TTS_BUCKET = os.getenv('GOOGLE_CLOUD_TTS_BUCKET', 'nusabaca_tts_bucket')
 GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_page_bucket')
+
+# django-allauth configuration
+# https://docs.allauth.org/en/latest/installation/quickstart.html
+
+HEADLESS_ONLY = True
+HEADLESS_TOKEN_STRATEGY = 'apps.core.allauth.headless.sessions.SessionTokenStrategy'
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Provider specific settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each OAuth based provider, either add a ``SocialApp``
+        # (``socialaccount`` app) containing the required client
+        # credentials, or list them here:
+        'APP': {
+            'client_id': os.getenv('GOOGLE_OAUTH_CLIENT_ID', '123'),
+            'secret': os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '456'),
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'FETCH_USERINFO' : True,
+    }
+}
+
+# Django REST Framework and JWT settings
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
