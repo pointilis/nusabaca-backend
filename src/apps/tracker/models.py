@@ -58,12 +58,17 @@ class BiblioCollection(BaseModel, BiblioBaseModel):
         return f"{self.collection.name} - {self.biblio.title}"
 
     def save(self, *args, **kwargs):
-        # Saving BiblioCollection, syncing fields from Biblio
-        if self.biblio:
-            fields = self.biblio._meta.fields
+        # Saving BiblioCollection, syncing fields to Biblio
+        # but only on creation
+        if self.biblio and not self.pk:
+            fields = self.biblio._meta.fields + self.biblio._meta.many_to_many
             for field in fields:
                 # Auto-copy fields from Biblio except certain fields
-                if field.name not in ['id', 'created_by', 'created_at', 'updated_at']:
+                if field.name in ['authors', 'genres', 'publishers']:
+                    # Many-to-many fields need special handling
+                    getattr(self, field.name).set(getattr(self.biblio, field.name).all())
+
+                elif field.name not in ['id', 'created_by', 'created_at', 'updated_at']:
                     setattr(self, field.name, getattr(self.biblio, field.name))
 
         super().save(*args, **kwargs)

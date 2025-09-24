@@ -18,8 +18,8 @@ class TrackerConfig(AppConfig):
                           sender=models.ReadingSession, dispatch_uid='reading_session_save')
         
         # Connect signal to add new biblios to default collection
-        post_save.connect(signals.insert_biblio_from_library_to_collection,
-                          sender=library_models.Biblio, dispatch_uid='biblio_create')
+        # post_save.connect(signals.insert_biblio_from_library_to_collection,
+        #                   sender=library_models.Biblio, dispatch_uid='biblio_create')
 
         # Connect signal biblio collection save handler
         post_save.connect(signals.biblio_collection_save_handler,

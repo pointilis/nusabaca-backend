@@ -96,3 +96,8 @@ class TaggedGenreAdmin(admin.ModelAdmin):
 @admin.register(TaggedPublisher)
 class TaggedPublisherAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(TaggedAuthor)
+class TaggedAuthorAdmin(admin.ModelAdmin):
+    pass

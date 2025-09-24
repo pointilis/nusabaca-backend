@@ -10,15 +10,19 @@ class BiblioCollectionListCreateAPIView(generics.ListCreateAPIView):
     """
     queryset = BiblioCollection.objects.all()
     serializer_class = BiblioCollectionSerializer
-    filter_backends = (filters.OrderingFilter,)
-    filterset_fields = ['collection', 'biblio']
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['collection', 'biblio', 'created_by']
     search_fields = ['biblio__title', 'collection__name']
     ordering_fields = ['created_at']
     ordering = ['-created_at']  # Default ordering
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        return BiblioCollection.objects.filter(collection__created_by__id=user.id)
 
-class CollectionDetailAPIView(generics.RetrieveAPIView):
+
+class CollectionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     API view to retrieve details of a specific Collection.
     """

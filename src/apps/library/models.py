@@ -70,6 +70,15 @@ class Author(BaseModel):
         return self.name
 
 
+class TaggedAuthor(GenericTaggedItemBase):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
+                                     limit_choices_to=(models.Q(app_label='library', model='biblio')))
+    object_id = models.UUIDField()
+    tag = models.ForeignKey(Author, on_delete=models.CASCADE,
+                            related_name="%(app_label)s_%(class)s_items",
+                            verbose_name="Authors Tag")
+
+
 class Publisher(BaseModel):
     """
     Publishers of biblios
@@ -198,9 +207,11 @@ class BiblioBaseModel(models.Model):
     # Explicit many-to-many relationship for publishers using django-taggit
     publishers = TaggableManager(through=TaggedPublisher, verbose_name="Publishers")
 
+    # Explicit many-to-many relationship for authors using django-taggit
+    authors = TaggableManager(through=TaggedAuthor, verbose_name="Authors")
+
     # Generic relations
     covers = GenericRelation('library.Cover', related_query_name='biblio')
-    authors = GenericRelation('library.Author', related_query_name='biblio')
 
     # Search vector for full-text search
     search_vector = SearchVectorField(null=True)

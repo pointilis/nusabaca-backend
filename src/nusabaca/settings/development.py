@@ -4,7 +4,7 @@ from .base import * # noqa
 from .celery_config import *  # noqa
 
 DEBUG = True
-ALLOWED_HOSTS = ['LAPTOP-D3O5RTCV.local', 'localhost', '127.0.0.1', '172.23.80.1', '192.168.1.3']
+ALLOWED_HOSTS = ['LAPTOP-D3O5RTCV.local', 'localhost', '127.0.0.1', '172.23.80.1', '192.168.1.5']
 
 DATABASES = {
     'default': {
