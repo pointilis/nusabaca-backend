@@ -32,8 +32,12 @@ class BiblioCreateUpdateSerializer(serializers.ModelSerializer):
             'id', 'title', 'isbn', 'issn', 'original_title', 
             'description', 'original_publication_date', 'language',
             'authors', 'genres', 'publishers', 'total_pages', 'file_format',
+            'created_by', 'modified_by', 'created_at', 'modified_at',
+            'publication_year',
         ]
-        read_only_fields = ['id', 'created_at', 'modified_at']
+        read_only_fields = [
+            'id', 'created_by', 'modified_by', 'created_at', 'modified_at'
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,14 +51,14 @@ class BiblioCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a new biblio with related objects"""
         title = validated_data.pop('title')
-        isbn = validated_data.get('isbn', None)
-        issn = validated_data.get('issn', None)
+        isbn = validated_data.pop('isbn', None)
+        issn = validated_data.pop('issn', None)
         authors_data = validated_data.pop('authors', [])
         genres_data = validated_data.pop('genres', [])
         publishers_data = validated_data.pop('publishers', [])
-        
+
         # Create or update the biblio
-        biblio, created = Biblio.objects.update_or_create(
+        instance, created = Biblio.objects.update_or_create(
             title=title,
             isbn=isbn,
             issn=issn,
@@ -62,11 +66,14 @@ class BiblioCreateUpdateSerializer(serializers.ModelSerializer):
         )
 
         # Handle relationships
-        self._handle_authors(biblio, authors_data)
-        self._handle_genres(biblio, genres_data)
-        self._handle_publishers(biblio, publishers_data)
-        
-        return biblio
+        self._handle_authors(instance, authors_data)
+        self._handle_genres(instance, genres_data)
+        self._handle_publishers(instance, publishers_data)
+
+        # Set attribute to indicate if it was created or updated
+        setattr(instance, '_was_created', created)
+
+        return instance
 
     def update(self, instance, validated_data):
         """Update existing biblio with related objects"""
@@ -137,12 +144,15 @@ class BiblioCreateUpdateSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Custom representation to include related object names"""
         data = super().to_representation(instance)
-        
+        was_created = getattr(instance, '_was_created', True)
+
         # Convert many-to-many relationships to name lists
         data['authors'] = [author.name for author in instance.authors.all()]
         data['genres'] = [genre.name for genre in instance.genres.all()]
         data['publishers'] = [publisher.name for publisher in instance.publishers.all()]
-        
+
+        data.update({ 'is_new': was_created })
+
         return data
 
 

@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.db.models.signals import post_save
 
 
 class CoreConfig(AppConfig):
@@ -9,3 +10,7 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         import apps.core.signals  # noqa
+        from django.contrib.auth.models import User
+
+        # User saved signal
+        post_save.connect(apps.core.signals.user_saved, sender=User, dispatch_uid='user_saved')

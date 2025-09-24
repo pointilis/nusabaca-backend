@@ -4,7 +4,7 @@ from .base import * # noqa
 from .celery_config import *  # noqa
 
 DEBUG = True
-ALLOWED_HOSTS = ['LAPTOP-D3O5RTCV.local', 'localhost', '127.0.0.1', '172.23.80.1']
+ALLOWED_HOSTS = ['LAPTOP-D3O5RTCV.local', 'localhost', '127.0.0.1', '172.23.80.1', '192.168.1.3']
 
 DATABASES = {
     'default': {
@@ -15,22 +15,4 @@ DATABASES = {
         'HOST': '127.0.0.1',  # Or your database server's IP/hostname
         'PORT': '5432',  # Leave empty for default, or specify port if needed
     }
-}
-
-# ref: https://django-storages.readthedocs.io/en/latest/backends/gcloud.html
-
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
-        "OPTIONS": {
-          "bucket_name": GOOGLE_CLOUD_PAGE_BUCKET,
-          "project_id": GOOGLE_CLOUD_PROJECT_ID,
-        },
-    },
-    "staticfiles": {
-        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
-        "OPTIONS": {
-            "bucket_name": "nusabaca_staticfiles",
-        }
-    },
 }

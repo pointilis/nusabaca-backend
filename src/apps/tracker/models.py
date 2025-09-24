@@ -4,6 +4,7 @@ from django.db.models import F
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 from apps.core.models import BaseModel
+from apps.library.models import BiblioBaseModel
 from .apps import TrackerConfig
 
 app_label = TrackerConfig.label
@@ -29,8 +30,12 @@ class Collection(BaseModel):
         return f"{self.created_by.username} - {self.name}"
 
 
-class BiblioCollection(BaseModel):
-    """Biblios within user collections with personal metadata"""
+class BiblioCollection(BaseModel, BiblioBaseModel):
+    """
+    Biblios within user collections with personal metadata.
+    Inherited from BiblioBaseModel to populate biblio fields.
+    Maybe like a soft copy of Biblio.
+    """
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
     biblio = models.ForeignKey('library.Biblio', on_delete=models.CASCADE)
     personal_rating = models.PositiveIntegerField(
@@ -48,6 +53,20 @@ class BiblioCollection(BaseModel):
             models.Index(fields=['biblio']),
             models.Index(fields=['created_at']),
         ]
+
+    def __str__(self):
+        return f"{self.collection.name} - {self.biblio.title}"
+
+    def save(self, *args, **kwargs):
+        # Saving BiblioCollection, syncing fields from Biblio
+        if self.biblio:
+            fields = self.biblio._meta.fields
+            for field in fields:
+                # Auto-copy fields from Biblio except certain fields
+                if field.name not in ['id', 'created_by', 'created_at', 'updated_at']:
+                    setattr(self, field.name, getattr(self.biblio, field.name))
+
+        super().save(*args, **kwargs)
 
 
 class ReadingSession(BaseModel):

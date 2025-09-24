@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
@@ -142,6 +143,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'corsheaders',
     'taggit',
     'django_celery_results',
     'apps.core',
@@ -160,6 +162,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -168,11 +171,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # Added middleware for tracking created_by and modified_by fields
-    'apps.core.middleware.WhodidMiddleware',
-
     # Add the account middleware:
     'allauth.account.middleware.AccountMiddleware',
+
+    # Related to this issue: https://github.com/jpadilla/django-rest-framework-jwt/issues/45
+    'apps.core.middleware.AuthenticationMiddlewareJWT',
+    
+    # Added middleware for tracking created_by and modified_by fields
+    'apps.core.middleware.WhodidMiddleware',
 ]
 
 ROOT_URLCONF = 'nusabaca.urls'
@@ -299,4 +305,63 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 50
 }
+
+# Cors settings
+# https://pypi.org/project/django-cors-headers/
+
+CORS_ALLOWED_ORIGINS = [
+    "https://localhost",
+    "http://localhost",
+    "http://localhost:8100",
+    "http://localhost:8101",
+]
+
+CORS_ALLOW_METHODS = (
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+)
+
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+)
+
+# ref: https://django-storages.readthedocs.io/en/latest/backends/gcloud.html
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+          "bucket_name": GOOGLE_CLOUD_PAGE_BUCKET,
+          "project_id": GOOGLE_CLOUD_PROJECT_ID,
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": "nusabaca_staticfiles",
+        }
+    },
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=40),
+}
+
+# User reading tracker settings
+DEFAULT_COLLECTION_NAME = "Reading List"

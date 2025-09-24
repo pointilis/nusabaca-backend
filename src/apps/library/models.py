@@ -109,6 +109,15 @@ class Publisher(BaseModel):
         return self.name
 
 
+class TaggedPublisher(GenericTaggedItemBase):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE,
+                                     limit_choices_to=(models.Q(app_label='library', model='biblio')))
+    object_id = models.UUIDField()
+    tag = models.ForeignKey(Publisher, on_delete=models.CASCADE,
+                            related_name="%(app_label)s_%(class)s_items",
+                            verbose_name="Publishers Tag")
+
+
 class Genre(BaseModel):
     """Genres for biblios with hierarchical support"""
     name = models.CharField(max_length=100, unique=True)
@@ -133,12 +142,11 @@ class TaggedGenre(GenericTaggedItemBase):
                                      limit_choices_to=(models.Q(app_label='library', model='biblio')))
     object_id = models.UUIDField()
     tag = models.ForeignKey(Genre, on_delete=models.CASCADE,
-                            related_name="%(app_label)s_%(class)s_items",)
+                            related_name="%(app_label)s_%(class)s_items",
+                            verbose_name="Genres Tag")
 
 
-class Biblio(BaseModel):
-    """Central biblio entity - represents the work itself"""
-    
+class BiblioBaseModel(models.Model):
     FORMAT_CHOICES = [
         ('PDF', 'PDF'),
         ('EPUB', 'EPUB'),
@@ -169,6 +177,7 @@ class Biblio(BaseModel):
     issn = models.CharField(max_length=20, unique=True, null=True, blank=True)
     original_title = models.CharField(max_length=500, blank=True, help_text="Original title if translated")
     description = models.TextField(blank=True)
+    publication_year = models.PositiveIntegerField(null=True, blank=True, help_text="Year of publication")
     original_publication_date = models.DateField(null=True, blank=True, help_text="First publication date of the work")
     language = models.CharField(max_length=10, default='en', help_text="Original language")
 
@@ -184,16 +193,25 @@ class Biblio(BaseModel):
     file_size_mb = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Explicit many-to-many relationship for genres using django-taggit
-    genres = TaggableManager(through=TaggedGenre)
+    genres = TaggableManager(through=TaggedGenre, verbose_name="Genres")
+
+    # Explicit many-to-many relationship for publishers using django-taggit
+    publishers = TaggableManager(through=TaggedPublisher, verbose_name="Publishers")
 
     # Generic relations
-    covers = GenericRelation('Cover', related_query_name='biblio')
-    authors = GenericRelation(Author, related_query_name='biblios')
-    publishers = GenericRelation(Publisher, related_query_name='biblios')
-    
+    covers = GenericRelation('library.Cover', related_query_name='biblio')
+    authors = GenericRelation('library.Author', related_query_name='biblio')
+
     # Search vector for full-text search
     search_vector = SearchVectorField(null=True)
-    
+
+    class Meta:
+        abstract = True
+
+
+class Biblio(BaseModel, BiblioBaseModel):
+    """Central biblio entity - represents the work itself"""
+
     class Meta:
         db_table = f'{app_label}_biblios'
         unique_together = [('title', 'isbn', 'issn')]

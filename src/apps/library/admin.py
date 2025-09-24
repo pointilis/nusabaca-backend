@@ -66,13 +66,20 @@ class TaggedGenreInline(GenericStackedInline):
     extra = 1
 
 
+class TaggedPublisherInline(GenericStackedInline):
+    model = TaggedPublisher
+    ct_field = "content_type"
+    ct_fk_field = "object_id"
+    extra = 1
+
+
 @admin.register(Biblio)
 class BiblioAdmin(admin.ModelAdmin):
     list_display = ['title']
     list_filter = ['language']
     search_fields = ['title', 'isbn', 'issn', 'description']
     readonly_fields = ['created_at', 'modified_at', 'cover_preview']
-    inlines = [TaggedGenreInline, AuthorInline, PublisherInline, CoverInline]
+    inlines = [TaggedGenreInline, AuthorInline, TaggedPublisherInline, CoverInline]
     
     def cover_preview(self, obj):
         if obj.cover_image_url:
@@ -83,4 +90,9 @@ class BiblioAdmin(admin.ModelAdmin):
 
 @admin.register(TaggedGenre)
 class TaggedGenreAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(TaggedPublisher)
+class TaggedPublisherAdmin(admin.ModelAdmin):
     pass
