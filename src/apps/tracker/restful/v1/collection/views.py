@@ -1,6 +1,7 @@
 from rest_framework import generics, filters
 from rest_framework.permissions import IsAuthenticated
 from apps.tracker.models import BiblioCollection
+from apps.core.permissions import IsOwnerOrReadOnly
 from .serializers import BiblioCollectionSerializer
 
 
@@ -28,6 +29,6 @@ class CollectionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = BiblioCollection.objects.all()
     serializer_class = BiblioCollectionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     lookup_field = 'id'
     lookup_url_kwarg = 'uuid'
