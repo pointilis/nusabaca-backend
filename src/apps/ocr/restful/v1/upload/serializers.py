@@ -1,7 +1,7 @@
 import os
 import mimetypes
 from rest_framework import serializers
-from apps.library.models import Biblio
+from apps.tracker.models import BiblioCollection
 
 
 class FileSerializer(serializers.Serializer):
@@ -9,13 +9,13 @@ class FileSerializer(serializers.Serializer):
     Serializer for file uploads, specifically designed for OCR processing.
     Validates image files and prepares them for text extraction.
     """
-    
-    # Fields coming from Library app
-    biblio = serializers.SlugRelatedField(
+
+    # Fields coming from Tracker app
+    biblio_collection = serializers.SlugRelatedField(
         many=False,
         read_only=False,
         slug_field='id',
-        queryset=Biblio.objects.all()
+        queryset=BiblioCollection.objects.all()
     )
     page_number = serializers.IntegerField()
 

@@ -228,13 +228,13 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
             }
         
         # Generate file paths
-        biblio = user_metadata.get('biblio', {}) if user_metadata else {}
-        biblio_id = biblio.get('id', 'unknown')
-        page_number = biblio.get('page_number', 1)
+        biblio_collection = user_metadata.get('biblio_collection', {}) if user_metadata else {}
+        cid = biblio_collection.get('id', None)
+        page_number = biblio_collection.get('page_number', 1)
         timestamp = datetime.now().strftime('%Y/%m/%d')
         file_extension = os.path.splitext(filename)[1].lower()
         clean_filename = os.path.splitext(filename)[0][:50]
-        blob_path = f"pages/{timestamp}/{biblio_id}_{page_number}_{clean_filename}{file_extension}"
+        blob_path = f"pages/{timestamp}/{cid}_{page_number}_{clean_filename}{file_extension}"
 
         # Step 1: Upload file to Google Cloud Storage (20% progress)
         ocr_task_processor.update_task_status(

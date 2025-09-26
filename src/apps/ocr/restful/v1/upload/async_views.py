@@ -55,13 +55,9 @@ class AsyncUploadAPIView(APIView):
             confidence_threshold = serializer.validated_data.get('confidence_threshold', 0.8)
             
             # Biblio datasheet
-            biblio = serializer.validated_data.get('biblio', None)
+            biblio_collection = serializer.validated_data.get('biblio_collection', None)
             page_number = serializer.validated_data.get('page_number', None)
-            biblio_info = {
-                'id': str(biblio.id) if biblio else None,
-                'page_number': page_number if page_number else None
-            }
-            
+
             logger.info(f"Submitting async OCR task for file: {file.name} ({file.size} bytes)")
             
             # Read file data
@@ -74,7 +70,10 @@ class AsyncUploadAPIView(APIView):
                 'user_ip': request.META.get('REMOTE_ADDR', 'unknown'),
                 'user_agent': request.META.get('HTTP_USER_AGENT', 'unknown')[:200],  # Limit length
                 'submitted_at': str(request.META.get('HTTP_DATE', '')),
-                'biblio': biblio_info,
+                'biblio_collection': {
+                    'id': str(biblio_collection.id) if biblio_collection else None,
+                    'page_number': page_number if page_number else None
+                },
             }
             
             # Submit task to Celery

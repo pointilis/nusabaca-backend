@@ -37,13 +37,17 @@ class BiblioCollectionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a new BiblioCollection entry"""
         validated_data.update(self.defaults)
-        instance = BiblioCollection.objects.create(**validated_data)
+        title = validated_data.pop('title', None)
+        instance, _ = BiblioCollection.objects.get_or_create(
+            title=title,
+            created_by=self.request.user,
+            defaults=validated_data
+        )
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         """Update an existing BiblioCollection entry"""
-        print(validated_data)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -56,6 +60,7 @@ class BiblioCollectionSerializer(serializers.ModelSerializer):
         collection = self._handle_collection(data)
         data = super().to_internal_value(data)
         data.update({'biblio': biblio, 'collection': collection})
+
         return data
 
     def to_representation(self, instance):
@@ -109,7 +114,8 @@ class BiblioCollectionSerializer(serializers.ModelSerializer):
         
         collection, _ = Collection.objects.get_or_create(
             name=settings.DEFAULT_COLLECTION_NAME,
-            defaults={'created_by': self.request.user, 'modified_by': self.request.user, 'is_default': True}
+            created_by=self.request.user,
+            defaults={'modified_by': self.request.user, 'is_default': True}
         )
     
         return collection

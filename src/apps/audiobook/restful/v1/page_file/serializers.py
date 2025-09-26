@@ -1,0 +1,108 @@
+import logging
+
+
+from rest_framework import serializers
+from django.db import transaction
+from django.urls import reverse
+from apps.audiobook.models import PageFile
+from apps.ocr.tasks import submit_ocr_task
+
+# Configure logger
+logger = logging.getLogger(__name__)
+
+
+class PageFileSerializer(serializers.ModelSerializer):
+    voice_gender = serializers.CharField(write_only=True, required=False, default='male')
+
+    class Meta:
+        model = PageFile
+        fields = '__all__'
+        extra_kwargs = {
+            'language': {'read_only': False, 'required': True},
+            'file_format': {'read_only': True},
+            'full_text': {'read_only': True},
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request = self.context.get('request', None)
+
+    @transaction.atomic
+    def create(self, validated_data):
+        logger.debug(f"Creating/Updating PageFile with data: {validated_data}")
+
+        file = validated_data.pop('page_file', None)
+        page_number = validated_data.pop('page_number', None)
+        biblio = validated_data.pop('biblio_collection', None)
+        language = validated_data.pop('language', 'en')
+        voice_gender = validated_data.pop('voice_gender', 'male')
+
+        # Create or update PageFile instance
+        instance, _ = self.Meta.model.objects.update_or_create(
+            biblio_collection=biblio,
+            page_number=page_number,
+            defaults=validated_data
+        )
+
+        # Set task ID and initiate file processing
+        task_id = self._file_processing(instance, file, language, voice_gender)
+        instance.task_id = task_id
+        instance.save()
+
+        logger.info(f"PageFile created/updated with ID: {instance.id}, Task ID: {task_id}")
+
+        return instance
+
+    def get_unique_together_validators(self):
+        # Disable the unique together validator to allow custom handling
+        return []
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        processing_info = self._file_processing_info(instance.task_id)
+        data.update({'processing_info': processing_info})
+        
+        return data
+
+    def _file_processing(self, instance, file, language, voice_gender='male'):
+        logger.debug(f"Starting file processing for PageFile ID: {instance.id}")
+        
+        # Read file data
+        file.seek(0)
+        file_data = file.read()
+        file.seek(0)
+
+        # Prepare user metadata
+        user_metadata = {
+            'user_ip': self.request.META.get('REMOTE_ADDR', 'unknown'),
+            'user_agent': self.request.META.get('HTTP_USER_AGENT', 'unknown')[:200],  # Limit length
+            'submitted_at': str(self.request.META.get('HTTP_DATE', '')),
+            'biblio_collection': {
+                'id': str(instance.biblio_collection.id),
+                'page_id': str(instance.id),
+                'page_number': instance.page_number,
+                'voice_gender': voice_gender
+            },
+        }
+
+        # Submit task to Celery
+        task_id = submit_ocr_task(
+            file_data=file_data,
+            filename=file.name,
+            content_type=file.content_type or 'application/octet-stream',
+            language=language,
+            extract_format='text',
+            confidence_threshold=0.8,
+            user_metadata=user_metadata,
+        )
+        return task_id
+
+    def _file_processing_info(self, task_id):
+        # Placeholder for retrieving task result if needed
+        status_url = reverse('api:ocr:v1:async-upload-status', args=[task_id])
+        absolute_status_url = self.request.build_absolute_uri(status_url)
+        return {
+            'check_url': absolute_status_url,
+            'recommended_interval_seconds': 5,
+            'timeout_minutes': 30
+        }
