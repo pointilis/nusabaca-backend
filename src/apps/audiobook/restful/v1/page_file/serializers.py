@@ -6,6 +6,7 @@ from django.db import transaction
 from django.urls import reverse
 from apps.audiobook.models import PageFile
 from apps.ocr.tasks import submit_ocr_task
+from ..audio_file.serializers import AudioFileSerializer
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class PageFileSerializer(serializers.ModelSerializer):
     voice_gender = serializers.CharField(write_only=True, required=False, default='male')
+    audiofile = AudioFileSerializer(read_only=True, many=False)
 
     class Meta:
         model = PageFile
@@ -50,7 +52,26 @@ class PageFileSerializer(serializers.ModelSerializer):
         instance.save()
 
         logger.info(f"PageFile created/updated with ID: {instance.id}, Task ID: {task_id}")
+        return instance
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        logger.debug(f"Updating PageFile ID: {instance.id}")
 
+        file = validated_data.pop('page_file', None)
+        language = validated_data.pop('language', 'en')
+        voice_gender = validated_data.pop('voice_gender', 'male')
+
+        # Update instance fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Set task ID and initiate file processing
+        task_id = self._file_processing(instance, file, language, voice_gender)
+        instance.task_id = task_id
+        instance.save()
+
+        logger.info(f"PageFile updated with ID: {instance.id}, Task ID: {task_id}")
         return instance
 
     def get_unique_together_validators(self):
@@ -60,7 +81,12 @@ class PageFileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         processing_info = self._file_processing_info(instance.task_id)
-        data.update({'processing_info': processing_info})
+        detail_url = reverse('api:audiobook:v1:page-file-detail', args=[instance.id])
+        
+        data.update({
+            'processing_info': processing_info,
+            '_detail_url': self.request.build_absolute_uri(detail_url)
+        })
         
         return data
 

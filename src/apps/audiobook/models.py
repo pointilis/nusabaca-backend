@@ -49,6 +49,7 @@ class PageFile(BaseModel):
     page_number = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     full_text = models.TextField(help_text="The complete processed text content")
     language = models.CharField(max_length=10, default='en', help_text="Language code (e.g., 'en' for English)")
+    voice_gender = models.CharField(max_length=10, default='male', help_text="Voice gender for TTS (e.g., 'male', 'female')")
     result = models.JSONField(blank=True, null=True, help_text="Raw OCR results in JSON format")
     
     class Meta:
@@ -74,10 +75,11 @@ class AudioFile(BaseModel):
     """Individual audio files/chapters within an audiobook"""
     task_id = models.CharField(max_length=100, unique=True, null=True, help_text="Unique ID for the OCR processing task")
     biblio_collection = models.ForeignKey('tracker.BiblioCollection', on_delete=models.CASCADE, related_name='audiofiles')
-    page = models.ForeignKey(PageFile, on_delete=models.SET_NULL, null=True, blank=True, related_name='audiofiles')
+    page_file = models.OneToOneField(PageFile, on_delete=models.SET_NULL, null=True, blank=True, related_name='audiofile')
 
     # File Details
     language = models.CharField(max_length=10, default='en', help_text="Language code (e.g., 'en' for English)")
+    voice_gender = models.CharField(max_length=10, default='male', help_text="Voice gender for TTS (e.g., 'male', 'female')")
     page_number = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     audio_file = models.FileField(upload_to=audio_file_path, storage=AudioFileStorage, 
                                   max_length=500, help_text="Generated audio file for the page")
