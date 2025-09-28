@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class PageFileSerializer(serializers.ModelSerializer):
-    voice_gender = serializers.CharField(write_only=True, required=False, default='male')
     audiofile = AudioFileSerializer(read_only=True, many=False)
+    updated = serializers.BooleanField(read_only=True, default=False)
+    created = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = PageFile
@@ -36,11 +37,11 @@ class PageFileSerializer(serializers.ModelSerializer):
         file = validated_data.pop('page_file', None)
         page_number = validated_data.pop('page_number', None)
         biblio = validated_data.pop('biblio_collection', None)
-        language = validated_data.pop('language', 'en')
-        voice_gender = validated_data.pop('voice_gender', 'male')
+        language = validated_data.get('language', 'en')
+        voice_gender = validated_data.get('voice_gender', 'male')
 
         # Create or update PageFile instance
-        instance, _ = self.Meta.model.objects.update_or_create(
+        instance, created = self.Meta.model.objects.update_or_create(
             biblio_collection=biblio,
             page_number=page_number,
             defaults=validated_data
@@ -51,6 +52,10 @@ class PageFileSerializer(serializers.ModelSerializer):
         instance.task_id = task_id
         instance.save()
 
+        # Set created/updated flags
+        setattr(instance, 'created', created)
+        setattr(instance, 'updated', not created)
+
         logger.info(f"PageFile created/updated with ID: {instance.id}, Task ID: {task_id}")
         return instance
     
@@ -59,8 +64,8 @@ class PageFileSerializer(serializers.ModelSerializer):
         logger.debug(f"Updating PageFile ID: {instance.id}")
 
         file = validated_data.pop('page_file', None)
-        language = validated_data.pop('language', 'en')
-        voice_gender = validated_data.pop('voice_gender', 'male')
+        language = validated_data.get('language', 'en')
+        voice_gender = validated_data.get('voice_gender', 'male')
 
         # Update instance fields
         for attr, value in validated_data.items():
@@ -70,6 +75,10 @@ class PageFileSerializer(serializers.ModelSerializer):
         task_id = self._file_processing(instance, file, language, voice_gender)
         instance.task_id = task_id
         instance.save()
+
+        # Set created/updated flags
+        setattr(instance, 'created', False)
+        setattr(instance, 'updated', True)
 
         logger.info(f"PageFile updated with ID: {instance.id}, Task ID: {task_id}")
         return instance
@@ -85,6 +94,8 @@ class PageFileSerializer(serializers.ModelSerializer):
         
         data.update({
             'processing_info': processing_info,
+            'created': getattr(instance, 'created', False),
+            'updated': getattr(instance, 'updated', False),
             '_detail_url': self.request.build_absolute_uri(detail_url)
         })
         
@@ -103,11 +114,11 @@ class PageFileSerializer(serializers.ModelSerializer):
             'user_ip': self.request.META.get('REMOTE_ADDR', 'unknown'),
             'user_agent': self.request.META.get('HTTP_USER_AGENT', 'unknown')[:200],  # Limit length
             'submitted_at': str(self.request.META.get('HTTP_DATE', '')),
+            'voice_gender': voice_gender,
             'biblio_collection': {
                 'id': str(instance.biblio_collection.id),
                 'page_id': str(instance.id),
                 'page_number': instance.page_number,
-                'voice_gender': voice_gender
             },
         }
 
@@ -117,9 +128,10 @@ class PageFileSerializer(serializers.ModelSerializer):
             filename=file.name,
             content_type=file.content_type or 'application/octet-stream',
             language=language,
-            extract_format='text',
+            extract_format='structured',
             confidence_threshold=0.8,
             user_metadata=user_metadata,
+            voice_gender=voice_gender
         )
         return task_id
 

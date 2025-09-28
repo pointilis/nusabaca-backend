@@ -44,6 +44,12 @@ CELERY_TASK_ROUTES = {
         'queue': 'status_check',
         'routing_key': 'status.check',
     },
+
+    # TTS Streaming processing tasks
+    'apps.ocr.tasks.process_tts_streaming_generation': {
+        'queue': 'process_tts_streaming_generation',
+        'routing_key': 'tts.streaming.process',
+    },
 }
 
 # Task execution settings

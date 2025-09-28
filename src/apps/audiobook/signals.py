@@ -2,7 +2,7 @@ import logging
 
 from celery.signals import task_success
 from apps.audiobook.models import AudioFile, PageFile
-from apps.ocr.tasks import submit_tts_task
+from apps.ocr.tasks import submit_tts_streaming_task, submit_tts_task
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -50,7 +50,19 @@ def task_success_handler(sender=None, result=None, **kwargs):
                     logger.info(f"PageFile {'created' if created else 'updated'} with id: {instance.biblio_collection.title} Page: {page_number}")
    
                     # Submit task to Celery
-                    tts_task_id = submit_tts_task(
+                    # tts_task_id = submit_tts_task(
+                    #     text=full_text,
+                    #     language_code=language,
+                    #     voice_gender=voice_gender,
+                    #     speaking_rate=0.8,
+                    #     user_metadata={
+                    #         'page_id': str(instance.id),  # Insert page id into user metadata for TTS task
+                    #         'biblio_collection': biblio_collection,
+                    #         **user_metadata
+                    #     }
+                    # )
+
+                    tts_task_id = submit_tts_streaming_task(
                         text=full_text,
                         language_code=language,
                         voice_gender=voice_gender,
@@ -58,6 +70,7 @@ def task_success_handler(sender=None, result=None, **kwargs):
                         user_metadata={
                             'page_id': str(instance.id),  # Insert page id into user metadata for TTS task
                             'biblio_collection': biblio_collection,
+                            'voice_gender': voice_gender,
                             **user_metadata
                         }
                     )
@@ -67,7 +80,7 @@ def task_success_handler(sender=None, result=None, **kwargs):
                 except Exception as e:
                     logger.error(f"Error updating PageFile for task id {task_id}: {e}")
 
-        if name == 'apps.ocr.tasks.process_tts_generation':
+        if name == 'apps.ocr.tasks.process_tts_generation' or name == 'apps.ocr.tasks.process_tts_streaming_generation':
             logger.info(f"TTS Task signal received: {name} completed successfully")
             logger.info(f"TTS User metadata: {user_metadata}")
 
@@ -79,7 +92,8 @@ def task_success_handler(sender=None, result=None, **kwargs):
                 file_size_bytes = audio_info.get('size', 0)
                 file_format = audio_info.get('format', 'mp3')
 
-                logger.debug(f"TTS Task details - CID: {cid}, Page ID: {page_id}")
+                logger.info(f"TTS Task details - CID: {cid}, Page ID: {page_id}")
+                logger.info(f"TTS Audio gcs path: {gcs_path}")
 
                 try:
                     # Update or create AudioFile entry
