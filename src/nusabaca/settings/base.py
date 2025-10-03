@@ -11,14 +11,36 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
-from pathlib import Path
-from dotenv import load_dotenv
-from datetime import timedelta
+import io
+import environ
+import json
 
-load_dotenv()
+from pathlib import Path
+from datetime import timedelta
+from urllib.parse import urlparse
+from google.oauth2 import service_account
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Initialize environment variables
+env = environ.Env(DEBUG=(bool, False))
+env_file = os.path.join(BASE_DIR.parent.parent, ".env")
+
+if os.path.exists(env_file):
+    env.read_env(env_file)
+elif os.environ.get("GOOGLE_CLOUD_PROJECT", None):
+    from google.cloud import secretmanager
+    # Initialize the Secret Manager client
+    # pull secrets from Secret Manager when on GCP
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    client = secretmanager.SecretManagerServiceClient()
+    settings_name = os.environ.get("SETTINGS_NAME", "django_settings")
+    name = f"projects/{project_id}/secrets/{settings_name}/versions/latest"
+    payload = client.access_secret_version(request={"name": name}).payload.data.decode("UTF-8")
+    env.read_env(io.StringIO(payload))
+else:
+    print("No .env file found. Using default environment variables where applicable.")
 
 # Create logs directory if it doesn't exist
 LOGS_DIR = BASE_DIR.parent.parent / 'logs'
@@ -130,8 +152,21 @@ SECRET_KEY = 'django-insecure-=1qq@b=u!2&9np16#f9t+48*bd%@#x(pf61v)rqv6r%b$o-7an
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-ALLOWED_HOSTS = []
 
+# SECURITY WARNING: It's recommended that you use this when
+# running in production. The URL will be known once you first deploy
+# to App Engine. This code takes the URL and converts it to both these settings formats.
+APPENGINE_URL = env("APPENGINE_URL", default=None)
+if APPENGINE_URL:
+    # Ensure a scheme is present in the URL before it's processed.
+    if not urlparse(APPENGINE_URL).scheme:
+        APPENGINE_URL = f"https://{APPENGINE_URL}"
+
+    ALLOWED_HOSTS = [urlparse(APPENGINE_URL).netloc]
+    CSRF_TRUSTED_ORIGINS = [APPENGINE_URL]
+    SECURE_SSL_REDIRECT = True
+else:
+    ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -259,7 +294,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Google Cloud settings
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 GOOGLE_CLOUD_PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT_ID', 'nusabaca')
-GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_biblio_bucket')
 GOOGLE_CLOUD_TTS_BUCKET = os.getenv('GOOGLE_CLOUD_TTS_BUCKET', 'nusabaca_tts_bucket')
 GOOGLE_CLOUD_PAGE_BUCKET = os.getenv('GOOGLE_CLOUD_PAGE_BUCKET', 'nusabaca_page_bucket')
 
@@ -341,6 +375,17 @@ CORS_ALLOW_HEADERS = (
 )
 
 # ref: https://django-storages.readthedocs.io/en/latest/backends/gcloud.html
+# Google Cloud Storage settings
+
+try:
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
+        os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
+    )
+except Exception as e:
+    account_info = json.loads(os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '{}'))
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_info(
+        account_info
+    )
 
 STORAGES = {
     "default": {
@@ -351,10 +396,7 @@ STORAGES = {
         },
     },
     "staticfiles": {
-        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
-        "OPTIONS": {
-            "bucket_name": "nusabaca_staticfiles",
-        }
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 

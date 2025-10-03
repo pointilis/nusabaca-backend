@@ -67,6 +67,7 @@ def task_success_handler(sender=None, result=None, **kwargs):
                         language_code=language,
                         voice_gender=voice_gender,
                         speaking_rate=0.8,
+                        volume_gain_db=16.0,  # Increase volume by 16 dB
                         user_metadata={
                             'page_id': str(instance.id),  # Insert page id into user metadata for TTS task
                             'biblio_collection': biblio_collection,

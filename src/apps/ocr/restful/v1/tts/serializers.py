@@ -45,7 +45,7 @@ class TTSSerializer(serializers.Serializer):
         help_text="Voice index within gender category (0 or 1)"
     )
     
-    audio_format = serializers.ChoiceField(
+    audio_encoding = serializers.ChoiceField(
         choices=[
             ('mp3', 'MP3'),
             ('wav', 'WAV'),

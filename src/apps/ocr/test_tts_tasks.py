@@ -35,7 +35,7 @@ def test_basic_tts_task():
             text=test_text,
             language_code='en',
             voice_gender='female',
-            audio_format='mp3',
+            audio_encoding='mp3',
             file_prefix='test_tts'
         )
         print(f"✅ Task submitted successfully!")
@@ -102,7 +102,7 @@ def test_advanced_tts():
             language_code='en',
             voice_gender='male',
             voice_index=1,  # Use second male voice
-            audio_format='wav',
+            audio_encoding='wav',
             speaking_rate=0.8,  # Slower
             pitch=-2.0,  # Lower pitch
             volume_gain_db=3.0,  # Louder

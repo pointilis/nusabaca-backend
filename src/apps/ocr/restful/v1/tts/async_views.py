@@ -53,7 +53,7 @@ class AsyncTTSAPIView(APIView):
             language_code = validated_data.get('language', 'en')
             voice_gender = validated_data.get('voice_gender', 'female')
             voice_index = validated_data.get('voice_index', 0)
-            audio_format = validated_data.get('audio_format', 'mp3')
+            audio_encoding = validated_data.get('audio_encoding', 'mp3')
             speaking_rate = validated_data.get('speaking_rate', 1.0)
             pitch = validated_data.get('pitch', 0.0)
             volume_gain_db = validated_data.get('volume_gain_db', 0.0)
@@ -87,7 +87,7 @@ class AsyncTTSAPIView(APIView):
                 language_code=language_code,
                 voice_gender=voice_gender,
                 voice_index=voice_index,
-                audio_format=audio_format,
+                audio_encoding=audio_encoding,
                 speaking_rate=speaking_rate,
                 pitch=pitch,
                 volume_gain_db=volume_gain_db,
@@ -113,7 +113,7 @@ class AsyncTTSAPIView(APIView):
                     'language_code': language_code,
                     'voice_gender': voice_gender,
                     'voice_index': voice_index,
-                    'audio_format': audio_format,
+                    'audio_encoding': audio_encoding,
                     'speaking_rate': speaking_rate,
                     'pitch': pitch,
                     'volume_gain_db': volume_gain_db,

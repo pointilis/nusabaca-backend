@@ -31,6 +31,7 @@ class OCRTaskProcessor:
         self.service_account_path = getattr(settings, 'GOOGLE_APPLICATION_CREDENTIALS', 
                                           os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
         self.project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', os.getenv('GOOGLE_CLOUD_PROJECT_ID'))
+        self.gemini_api_key = os.getenv('GOOGLE_GENAI_API_KEY', None)
         
         # Initialize client placeholders
         self.storage_client = None
@@ -54,7 +55,7 @@ class OCRTaskProcessor:
                 logger.warning("GCS bucket name not configured. Storage features will be disabled.")
             
             # Initialize Google Cloud Vision
-            self.vision_client = GoogleCloudVision(self.service_account_path)
+            self.vision_client = GoogleCloudVision(self.service_account_path, self.gemini_api_key)
             
             if self.vision_client.is_client_ready():
                 logger.info("Google Cloud Vision client initialized in task processor")
@@ -502,7 +503,7 @@ def process_ocr_upload(self, file_data: bytes, filename: str, content_type: str,
 @shared_task(bind=True, ignore_result=False, max_retries=3, default_retry_delay=60)
 def process_tts_generation(self, text: str, language_code: str = 'en',
                          voice_gender: str = 'female', voice_index: int = 0,
-                         audio_format: str = 'mp3', speaking_rate: float = 1.0,
+                         audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                          pitch: float = 0.0, volume_gain_db: float = 0.0,
                          file_prefix: str = 'tts_audio',
                          user_metadata: Optional[Dict] = None) -> Dict[str, Any]:
@@ -514,7 +515,7 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category (0-1)
-        audio_format (str): Output audio format ('mp3', 'wav', 'ogg')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -610,7 +611,7 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
                 language_code=language_code,
                 voice_gender=voice_gender,
                 voice_index=voice_index,
-                audio_format=audio_format,
+                audio_encoding=audio_encoding,
                 speaking_rate=speaking_rate,
                 pitch=pitch,
                 volume_gain_db=volume_gain_db,
@@ -674,7 +675,7 @@ def process_tts_generation(self, text: str, language_code: str = 'en',
                 'voice_name': tts_result.get('voice_name', 'unknown')
             },
             'audio_info': {
-                'format': audio_format,
+                'format': audio_encoding,
                 'size': tts_result.get('file_size', tts_result.get('content_length', 0)),
                 'size_mb': round(tts_result.get('file_size', tts_result.get('content_length', 0)) / (1024 * 1024), 2),
                 'duration_estimate': round(text_length / 150 * 60, 1),  # Rough estimate: ~150 chars per minute
@@ -995,7 +996,7 @@ def get_ocr_task_status(task_id: str) -> Dict[str, Any]:
 # Utility functions for TTS task management
 def submit_tts_task(text: str, language_code: str = 'en',
                    voice_gender: str = 'female', voice_index: int = 0,
-                   audio_format: str = 'mp3', speaking_rate: float = 1.0,
+                   audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                    pitch: float = 0.0, volume_gain_db: float = 0.0,
                    file_prefix: str = 'tts_audio',
                    user_metadata: Optional[Dict] = None) -> str:
@@ -1007,7 +1008,7 @@ def submit_tts_task(text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category
-        audio_format (str): Output audio format ('mp3', 'wav', 'ogg')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -1022,7 +1023,7 @@ def submit_tts_task(text: str, language_code: str = 'en',
         language_code=language_code,
         voice_gender=voice_gender,
         voice_index=voice_index,
-        audio_format=audio_format,
+        audio_encoding=audio_encoding,
         speaking_rate=speaking_rate,
         pitch=pitch,
         volume_gain_db=volume_gain_db,
@@ -1116,7 +1117,7 @@ def quick_tts_task(text: str, language: str = 'en', gender: str = 'female') -> s
         text=text,
         language_code=language,
         voice_gender=gender,
-        audio_format='mp3',
+        audio_encoding='mp3',
         file_prefix='quick_tts'
     )
 
@@ -1126,7 +1127,7 @@ def quick_tts_task(text: str, language: str = 'en', gender: str = 'female') -> s
 @shared_task(bind=True, ignore_result=False, max_retries=3, default_retry_delay=60)
 def process_tts_streaming_generation(self, text: str, language_code: str = 'en',
                                    voice_gender: str = 'female', voice_index: int = 0,
-                                   audio_encoding: str = 'MP3', speaking_rate: float = 1.0,
+                                   audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                                    pitch: float = 0.0, volume_gain_db: float = 0.0,
                                    use_ssml: bool = False, file_prefix: str = 'streaming_tts',
                                    save_to_gcs: bool = True,
@@ -1139,7 +1140,7 @@ def process_tts_streaming_generation(self, text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category (0-1)
-        audio_encoding (str): Output audio format ('MP3', 'WAV', 'OGG')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -1417,7 +1418,7 @@ def process_tts_streaming_generation(self, text: str, language_code: str = 'en',
 @shared_task(bind=True, ignore_result=False, max_retries=2, default_retry_delay=30)
 def process_tts_streaming_chunks(self, text: str, language_code: str = 'en',
                                voice_gender: str = 'female', voice_index: int = 0,
-                               audio_encoding: str = 'MP3', speaking_rate: float = 1.0,
+                               audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                                pitch: float = 0.0, volume_gain_db: float = 0.0,
                                use_ssml: bool = False,
                                chunk_callback_url: Optional[str] = None,
@@ -1430,7 +1431,7 @@ def process_tts_streaming_chunks(self, text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category
-        audio_encoding (str): Output audio format ('MP3', 'WAV', 'OGG')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -1645,7 +1646,7 @@ def get_tts_streaming_task_status(task_id: str) -> Dict[str, Any]:
 
 def submit_tts_streaming_task(text: str, language_code: str = 'en',
                             voice_gender: str = 'female', voice_index: int = 0,
-                            audio_encoding: str = 'MP3', speaking_rate: float = 1.0,
+                            audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                             pitch: float = 0.0, volume_gain_db: float = 0.0,
                             use_ssml: bool = False, file_prefix: str = 'streaming_tts',
                             save_to_gcs: bool = True,
@@ -1658,7 +1659,7 @@ def submit_tts_streaming_task(text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category
-        audio_encoding (str): Output audio format ('MP3', 'WAV', 'OGG')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -1691,7 +1692,7 @@ def submit_tts_streaming_task(text: str, language_code: str = 'en',
 
 def submit_tts_chunk_streaming_task(text: str, language_code: str = 'en',
                                   voice_gender: str = 'female', voice_index: int = 0,
-                                  audio_encoding: str = 'MP3', speaking_rate: float = 1.0,
+                                  audio_encoding: str = 'mp3', speaking_rate: float = 1.0,
                                   pitch: float = 0.0, volume_gain_db: float = 0.0,
                                   use_ssml: bool = False,
                                   chunk_callback_url: Optional[str] = None,
@@ -1704,7 +1705,7 @@ def submit_tts_chunk_streaming_task(text: str, language_code: str = 'en',
         language_code (str): Language code ('id', 'en', 'en-GB')
         voice_gender (str): Voice gender ('male' or 'female')
         voice_index (int): Voice index within gender category
-        audio_encoding (str): Output audio format ('MP3', 'WAV', 'OGG')
+        audio_encoding (str): Output audio format ('mp3', 'wav', 'ogg')
         speaking_rate (float): Speaking rate (0.25 to 4.0)
         pitch (float): Pitch adjustment (-20.0 to 20.0 semitones)
         volume_gain_db (float): Volume gain (-96.0 to 16.0 dB)
@@ -1783,6 +1784,6 @@ def quick_tts_streaming_task(text: str, language: str = 'en', gender: str = 'fem
         text=text,
         language_code=language,
         voice_gender=gender,
-        audio_encoding='MP3',
+        audio_encoding='mp3',
         file_prefix='quick_streaming_tts'
     )

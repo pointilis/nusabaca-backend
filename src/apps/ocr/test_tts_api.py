@@ -16,7 +16,7 @@ class TTSAPITester:
         self.tts_submit_url = f"{base_url}/api/ocr/v1/tts/async/"
         self.tts_status_url = f"{base_url}/api/ocr/v1/tts/status/"
     
-    def submit_tts_task(self, text, language='en', voice_gender='female', audio_format='mp3'):
+    def submit_tts_task(self, text, language='en', voice_gender='female', audio_encoding='mp3'):
         """
         Submit a TTS processing task.
         
@@ -24,7 +24,7 @@ class TTSAPITester:
             text (str): Text to convert to speech
             language (str): Language code
             voice_gender (str): Voice gender
-            audio_format (str): Audio format
+            audio_encoding (str): Audio format
             
         Returns:
             dict: API response
@@ -33,7 +33,7 @@ class TTSAPITester:
             'text': text,
             'language': language,
             'voice_gender': voice_gender,
-            'audio_format': audio_format,
+            'audio_encoding': audio_encoding,
             'speaking_rate': 1.0,
             'pitch': 0.0,
             'volume_gain_db': 0.0,
@@ -43,7 +43,7 @@ class TTSAPITester:
         try:
             print(f"🚀 Submitting TTS task...")
             print(f"📝 Text: {text[:100]}{'...' if len(text) > 100 else ''}")
-            print(f"🌐 Language: {language}, Voice: {voice_gender}, Format: {audio_format}")
+            print(f"🌐 Language: {language}, Voice: {voice_gender}, Format: {audio_encoding}")
             
             response = requests.post(self.tts_submit_url, json=payload)
             
@@ -195,7 +195,7 @@ def test_advanced_tts():
         'language': 'en',
         'voice_gender': 'male',
         'voice_index': 1,  # Second male voice
-        'audio_format': 'wav',
+        'audio_encoding': 'wav',
         'speaking_rate': 0.8,  # Slower
         'pitch': -2.0,  # Lower pitch
         'volume_gain_db': 3.0,  # Louder
@@ -284,4 +284,4 @@ if __name__ == "__main__":
     print("  text (required): Text to convert to speech")
     print("  language (optional): 'en', 'id', 'en-GB'")
     print("  voice_gender (optional): 'male', 'female'")
-    print("  audio_format (optional): 'mp3', 'wav', 'ogg'")
+    print("  audio_encoding (optional): 'mp3', 'wav', 'ogg'")
